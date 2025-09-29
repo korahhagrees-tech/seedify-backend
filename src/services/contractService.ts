@@ -3,11 +3,13 @@ import { ContractSeedData, ContractSeedMetadata } from '../types/seed';
 import { contractConfig } from '../config/contract';
 import SeedFactoryABI from '../abi/seedfactory-abi.json';
 import SeedNFTABI from '../abi/seednft-abi.json';
+import DistributorABI from '../abi/distributor-abi.json';
 
 export class ContractService {
   private provider: ethers.JsonRpcProvider;
   private seedFactoryContract: ethers.Contract | null = null;
   private seedNFTContract: ethers.Contract | null = null;
+  private distributorContract: ethers.Contract | null = null;
   private rateLimitDelay: number = contractConfig.rateLimitDelay;
   private maxRetries: number = contractConfig.maxRetries;
 
@@ -31,10 +33,20 @@ export class ContractService {
           this.provider
         );
       }
+
+      // Initialize Distributor contract for beneficiary/location data
+      if (contractConfig.distributorAddress && contractConfig.distributorAddress !== '0x0000000000000000000000000000000000000000') {
+        this.distributorContract = new ethers.Contract(
+          contractConfig.distributorAddress as string,
+          DistributorABI,
+          this.provider
+        );
+      }
     } else {
       // Create dummy contracts for mock data mode
       this.seedFactoryContract = null as any;
       this.seedNFTContract = null as any;
+      this.distributorContract = null as any;
     }
   }
 
@@ -357,6 +369,97 @@ export class ContractService {
    */
   getProvider(): ethers.JsonRpcProvider {
     return this.provider;
+  }
+
+  /**
+   * Get beneficiary data from distributor contract
+   */
+  async getBeneficiaryData(beneficiaryIndex: number): Promise<any | null> {
+    if (!this.distributorContract) {
+      return null;
+    }
+
+    try {
+      const beneficiaryData = await this.retryWithBackoff(async () => {
+        return await this.distributorContract!.getBeneficiary(beneficiaryIndex);
+      });
+
+      return {
+        index: beneficiaryIndex,
+        name: beneficiaryData[0],
+        code: beneficiaryData[1],
+        percentage: beneficiaryData[2],
+        address: beneficiaryData[3],
+        isActive: beneficiaryData[4]
+      };
+    } catch (error) {
+      console.error(`Error fetching beneficiary data for index ${beneficiaryIndex}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all beneficiaries from distributor contract
+   */
+  async getAllBeneficiaries(): Promise<any[]> {
+    if (!this.distributorContract) {
+      return [];
+    }
+
+    try {
+      const totalBeneficiaries = await this.retryWithBackoff(async () => {
+        return await this.distributorContract!.getTotalBeneficiaries();
+      });
+
+      const beneficiaries = [];
+      for (let i = 0; i < Number(totalBeneficiaries); i++) {
+        try {
+          const beneficiary = await this.getBeneficiaryData(i);
+          if (beneficiary && beneficiary.isActive) {
+            beneficiaries.push(beneficiary);
+          }
+        } catch (error) {
+          console.error(`Error fetching beneficiary ${i}:`, error);
+        }
+      }
+
+      return beneficiaries;
+    } catch (error) {
+      console.error('Error fetching all beneficiaries:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get beneficiary by code
+   */
+  async getBeneficiaryByCode(code: string): Promise<any | null> {
+    if (!this.distributorContract) {
+      return null;
+    }
+
+    try {
+      const beneficiaryIndex = await this.retryWithBackoff(async () => {
+        return await this.distributorContract!.getBeneficiaryIndexByCode(code);
+      });
+
+      if (beneficiaryIndex !== null && beneficiaryIndex !== undefined) {
+        return await this.getBeneficiaryData(Number(beneficiaryIndex));
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`Error fetching beneficiary by code ${code}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get location data from beneficiary (location = beneficiary)
+   */
+  async getLocationFromBeneficiary(beneficiaryIndex: number): Promise<string | null> {
+    const beneficiary = await this.getBeneficiaryData(beneficiaryIndex);
+    return beneficiary ? beneficiary.code : null;
   }
 }
 

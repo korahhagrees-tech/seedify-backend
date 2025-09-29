@@ -1,4 +1,6 @@
 import { Seed, SeedSummary, ContractSeedData, Location, EcosystemProject, WayOfFlowersData, SeedMetadata } from '../types/seed';
+import { mappingService } from './mappingService';
+import { contractService } from './contractService';
 
 export class SeedTransformService {
   private static instance: SeedTransformService;
@@ -110,11 +112,15 @@ export class SeedTransformService {
       ? (Number(contractData.depositAmount) / Math.pow(10, 18)).toFixed(4)
       : '0.0000';
 
+    // Get location name from mapping service
+    const locationMapping = mappingService.getLocationMapping(contractData.location || '');
+    const locationName = locationMapping ? locationMapping.locationName : contractData.location || 'Unknown Location';
+
     return {
       id: contractData.id.toString(),
       label: `Seed #${contractData.id}`,
       name: `Digital Flower ${contractData.id}`,
-      description: `A beautiful digital flower planted in ${contractData.location || 'the digital garden'}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
+      description: `A beautiful digital flower planted in ${locationName}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
       seedImageUrl: `/images/seeds/seed-${contractData.id}.png`,
       latestSnapshotUrl: contractData.snapshotCount && contractData.snapshotCount > 0 ? `/images/snapshots/snapshot-${contractData.id}-latest.png` : null,
       snapshotCount: contractData.snapshotCount || 0,
@@ -128,7 +134,7 @@ export class SeedTransformService {
         attributes: [
           { trait_type: 'Type', value: 'Seed' },
           { trait_type: 'Token ID', value: contractData.id },
-          { trait_type: 'Location', value: contractData.location || 'Unknown' },
+          { trait_type: 'Location', value: locationName },
           { trait_type: 'Created', value: createdDate.toISOString() },
           { trait_type: 'Deposit Amount', value: depositAmount },
           { trait_type: 'Snapshot Count', value: contractData.snapshotCount || 0 },
@@ -151,11 +157,43 @@ export class SeedTransformService {
       ? (Number(contractData.depositAmount) / Math.pow(10, 18)).toFixed(4)
       : '0.0000';
 
+    // Get complete hierarchy from mapping service
+    const locationMapping = mappingService.getLocationMapping(contractData.location || '');
+    const locationName = locationMapping ? locationMapping.locationName : contractData.location || 'Unknown Location';
+    const ecosystemProject = locationMapping ? locationMapping.ecosystemProject : null;
+    const wayOfFlowersData = locationMapping ? locationMapping.wayOfFlowersData : null;
+
+    // Create location object
+    const location: Location = {
+      id: contractData.location || 'unknown',
+      name: locationName,
+      slug: (contractData.location || 'unknown').toLowerCase(),
+      image: `/images/locations/${contractData.location || 'default'}.jpg`,
+      position: {
+        top: '50%',
+        left: '50%',
+        width: '100px',
+        height: '100px',
+        transform: 'translate(-50%, -50%)'
+      },
+      labelPosition: {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)'
+      }
+    };
+
+    // Create ecosystem projects array (only for this specific location)
+    const ecosystemProjects: EcosystemProject[] = ecosystemProject ? [ecosystemProject] : [];
+
+    // Create way of flowers data
+    const wayOfFlowers: WayOfFlowersData = wayOfFlowersData || this.mockWayOfFlowersData;
+
     return {
       id: contractData.id.toString(),
       label: `Seed #${contractData.id}`,
       name: `Digital Flower ${contractData.id}`,
-      description: `A beautiful digital flower planted in ${contractData.location || 'the digital garden'}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
+      description: `A beautiful digital flower planted in ${locationName}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
       seedImageUrl: `/images/seeds/seed-${contractData.id}.png`,
       latestSnapshotUrl: contractData.snapshotCount && contractData.snapshotCount > 0 ? `/images/snapshots/snapshot-${contractData.id}-latest.png` : null,
       snapshotCount: contractData.snapshotCount || 0,
@@ -169,7 +207,7 @@ export class SeedTransformService {
         attributes: [
           { trait_type: 'Type', value: 'Seed' },
           { trait_type: 'Token ID', value: contractData.id },
-          { trait_type: 'Location', value: contractData.location || 'Unknown' },
+          { trait_type: 'Location', value: locationName },
           { trait_type: 'Created', value: createdDate.toISOString() },
           { trait_type: 'Deposit Amount', value: depositAmount },
           { trait_type: 'Snapshot Count', value: contractData.snapshotCount || 0 },
@@ -177,9 +215,9 @@ export class SeedTransformService {
           { trait_type: 'Owner', value: contractData.owner }
         ]
       },
-      locations: this.mockLocations,
-      ecosystemProjects: this.mockEcosystemProjects,
-      wayOfFlowersData: this.mockWayOfFlowersData
+      locations: [location], // Only include the specific location for this seed
+      ecosystemProjects: ecosystemProjects, // Only include the ecosystem project for this location
+      wayOfFlowersData: wayOfFlowers // Include the way of flowers data for this location
     };
   }
 
