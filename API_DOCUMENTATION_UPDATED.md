@@ -278,6 +278,156 @@ Returns all snapshots for a specific beneficiary.
 
 ---
 
+## User-Specific Endpoints
+
+These endpoints return data specific to a user's wallet address.
+
+### 1. Get User's Seeds
+**GET** `/users/:address/seeds`
+
+Returns all seeds owned by the specified address.
+
+**Response:**
+```json
+{
+  "success": true,
+  "seeds": [
+    {
+      "id": "1",
+      "label": "Seed #1",
+      // ... full seed data
+    }
+  ],
+  "count": 1,
+  "owner": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
+  "timestamp": 1234567890
+}
+```
+
+### 2. Get User's Seed Count
+**GET** `/users/:address/seeds/count`
+
+**Response:**
+```json
+{
+  "success": true,
+  "count": 3,
+  "owner": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
+  "timestamp": 1234567890
+}
+```
+
+### 3. Get User's Snapshots
+**GET** `/users/:address/snapshots`
+
+Returns all snapshots created by the user.
+
+**Response:**
+```json
+{
+  "success": true,
+  "snapshots": [
+    {
+      "id": 1,
+      "creator": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
+      "value": 1000000000000000,
+      "valueEth": "0.001000",
+      "beneficiaryIndex": 0,
+      "seedId": 1,
+      "timestamp": 1234567890,
+      "blockNumber": 12345,
+      "positionInSeed": 0,
+      "processId": "process-123"
+    }
+  ],
+  "count": 1,
+  "creator": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
+  "timestamp": 1234567890
+}
+```
+
+### 4. Get User's Snapshot Count
+**GET** `/users/:address/snapshots/count`
+
+**Response:**
+```json
+{
+  "success": true,
+  "count": 5,
+  "creator": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
+  "timestamp": 1234567890
+}
+```
+
+### 5. Get User's Snapshot Data (Detailed)
+**GET** `/users/:address/snapshots/data`
+
+Returns detailed snapshot data including all metadata.
+
+### 6. Get User's Pool Balance
+**GET** `/users/:address/balance`
+
+Returns the user's balance in the Aave pool.
+
+**Response:**
+```json
+{
+  "success": true,
+  "balance": "1.234567",
+  "balanceWei": "1234567000000000000",
+  "user": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
+  "timestamp": 1234567890
+}
+```
+
+### 7. Get User's Stats
+**GET** `/users/:address/stats`
+
+Comprehensive user statistics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "stats": {
+    "totalSeeds": 3,
+    "totalSnapshots": 5,
+    "poolBalance": "1.234567",
+    "seedNFTBalance": 3,
+    "snapshotNFTBalance": 5
+  },
+  "user": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
+  "timestamp": 1234567890
+}
+```
+
+### 8. Get User's Portfolio (Complete)
+**GET** `/users/:address/portfolio`
+
+Complete user portfolio with all seeds, snapshots, and summary.
+
+**Response:**
+```json
+{
+  "success": true,
+  "portfolio": {
+    "seeds": [...],
+    "snapshots": [...],
+    "summary": {
+      "totalSeeds": 3,
+      "totalSnapshots": 5,
+      "totalDeposited": "5.123456",
+      "totalSnapshotValue": "0.050000",
+      "poolBalance": "1.234567"
+    }
+  },
+  "user": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
+  "timestamp": 1234567890
+}
+```
+
+---
+
 ## Write Endpoints
 
 All write endpoints return transaction data that the frontend must execute using the connected wallet.

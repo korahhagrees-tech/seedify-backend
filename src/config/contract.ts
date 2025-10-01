@@ -12,6 +12,7 @@ export const contractConfig = {
   seedFactoryAddress: process.env.SEED_FACTORY_ADDRESS,
   snapshotNFTAddress: process.env.SNAPSHOT_NFT_ADDRESS,
   distributorAddress: process.env.DISTRIBUTOR_ADDRESS,
+  aavePoolAddress: process.env.AAVE_POOL_ADDRESS,
   
   // Network Configuration
   chainId: 8453, // Base Mainnet

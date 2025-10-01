@@ -417,6 +417,163 @@ export class ContractService {
   }
 
   /**
+   * Get all seeds owned by a specific user
+   */
+  async getUserSeeds(userAddress: string): Promise<number[]> {
+    if (!this.seedNFTContract) {
+      return [];
+    }
+
+    try {
+      const seedIds = await this.retryWithBackoff(async () => {
+        return await this.seedNFTContract!.getSeedsByOwner(userAddress);
+      });
+
+      return seedIds.map((id: any) => Number(id));
+    } catch (error) {
+      console.error(`Error fetching seeds for user ${userAddress}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get count of seeds owned by a user
+   */
+  async getUserSeedsCount(userAddress: string): Promise<number> {
+    if (!this.seedNFTContract) {
+      return 0;
+    }
+
+    try {
+      const balance = await this.retryWithBackoff(async () => {
+        return await this.seedNFTContract!.balanceOf(userAddress);
+      });
+
+      return Number(balance);
+    } catch (error) {
+      console.error(`Error fetching seed count for user ${userAddress}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get snapshot IDs created by a user
+   */
+  async getUserSnapshotIds(userAddress: string): Promise<number[]> {
+    if (!this.snapshotNFTContract) {
+      return [];
+    }
+
+    try {
+      const snapshotIds = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getUserSnapshots(userAddress);
+      });
+
+      return snapshotIds.map((id: any) => Number(id));
+    } catch (error) {
+      console.error(`Error fetching snapshots for user ${userAddress}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get detailed snapshot data for a user
+   */
+  async getUserSnapshotData(userAddress: string): Promise<any[]> {
+    if (!this.snapshotNFTContract) {
+      return [];
+    }
+
+    try {
+      const snapshotData = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getUserSnapshotData(userAddress);
+      });
+
+      return snapshotData.map((snapshot: any) => ({
+        creator: snapshot.creator,
+        value: Number(snapshot.value),
+        valueEth: (Number(snapshot.value) / Math.pow(10, 18)).toFixed(6),
+        beneficiaryIndex: Number(snapshot.beneficiaryIndex),
+        seedId: Number(snapshot.seedId),
+        timestamp: Number(snapshot.timestamp),
+        blockNumber: Number(snapshot.blockNumber),
+        positionInSeed: Number(snapshot.positionInSeed),
+        processId: snapshot.processId
+      }));
+    } catch (error) {
+      console.error(`Error fetching snapshot data for user ${userAddress}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user's balance in Aave pool
+   */
+  async getUserPoolBalance(userAddress: string): Promise<string> {
+    if (!contractConfig.aavePoolAddress) {
+      return '0';
+    }
+
+    try {
+      const AavePoolABI = require('../abi/aavepool-abi.json');
+      const aavePoolContract = new ethers.Contract(
+        contractConfig.aavePoolAddress,
+        AavePoolABI,
+        this.provider
+      );
+
+      const balance = await this.retryWithBackoff(async () => {
+        return await aavePoolContract.getBalance(userAddress);
+      });
+
+      return balance.toString();
+    } catch (error) {
+      console.error(`Error fetching pool balance for user ${userAddress}:`, error);
+      return '0';
+    }
+  }
+
+  /**
+   * Get user's Seed NFT balance
+   */
+  async getUserSeedNFTBalance(userAddress: string): Promise<string> {
+    if (!this.seedNFTContract) {
+      return '0';
+    }
+
+    try {
+      const balance = await this.retryWithBackoff(async () => {
+        return await this.seedNFTContract!.balanceOf(userAddress);
+      });
+
+      return balance.toString();
+    } catch (error) {
+      console.error(`Error fetching seed NFT balance for user ${userAddress}:`, error);
+      return '0';
+    }
+  }
+
+  /**
+   * Get user's Snapshot NFT balance
+   */
+  async getUserSnapshotNFTBalance(userAddress: string): Promise<string> {
+    if (!this.snapshotNFTContract) {
+      return '0';
+    }
+
+    try {
+      const balance = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.balanceOf(userAddress);
+      });
+
+      return balance.toString();
+    } catch (error) {
+      console.error(`Error fetching snapshot NFT balance for user ${userAddress}:`, error);
+      return '0';
+    }
+  }
+
+  /**
    * Get beneficiary data from distributor contract
    */
   async getSeedBeneficiaries(seedId: number): Promise<{ code: string; index?: number; name?: string }[]> {

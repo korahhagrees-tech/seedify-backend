@@ -12,6 +12,7 @@ import beneficiaryRoutes from './routes/beneficiaries';
 import snapshotRoutes from './routes/snapshots';
 import adminRoutes from './routes/admin';
 import writeRoutes from './routes/write';
+import usersRoutes from './routes/users';
 
 // Create Express app
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/beneficiaries', beneficiaryRoutes);
 app.use('/api/snapshots', snapshotRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/write', writeRoutes);
+app.use('/api/users', usersRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -54,7 +56,8 @@ app.get('/', (req, res) => {
       beneficiaries: '/api/beneficiaries',
       snapshots: '/api/snapshots',
       admin: '/api/admin',
-      write: '/api/write'
+      write: '/api/write',
+      users: '/api/users'
     }
   });
 });
