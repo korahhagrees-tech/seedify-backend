@@ -1,6 +1,8 @@
 export const contractConfig = {
-  // Use mock data by default for development
-  useMockData: process.env.USE_MOCK_DATA === 'true' || !process.env.SEED_FACTORY_ADDRESS,
+  // Use mock data only if explicitly set to 'true' OR if no contract address is provided
+  useMockData: process.env.USE_MOCK_DATA === 'true' || 
+               !process.env.SEED_FACTORY_ADDRESS || 
+               process.env.SEED_FACTORY_ADDRESS === '0x0000000000000000000000000000000000000000',
   
   // RPC Configuration
   rpcUrl: process.env.RPC_URL || 'https://mainnet.base.org',

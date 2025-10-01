@@ -8,6 +8,10 @@ import { requestLogger } from './middleware/requestLogger';
 import healthRoutes from './routes/health';
 import statusRoutes from './routes/status';
 import seedRoutes from './routes/seeds';
+import beneficiaryRoutes from './routes/beneficiaries';
+import snapshotRoutes from './routes/snapshots';
+import adminRoutes from './routes/admin';
+import writeRoutes from './routes/write';
 
 // Create Express app
 const app = express();
@@ -32,6 +36,10 @@ app.use(express.urlencoded({ extended: true, limit: config.server.bodyLimit }));
 app.use('/api/health', healthRoutes);
 app.use('/api/status', statusRoutes);
 app.use('/api/seeds', seedRoutes);
+app.use('/api/beneficiaries', beneficiaryRoutes);
+app.use('/api/snapshots', snapshotRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/write', writeRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -42,7 +50,11 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       status: '/api/status',
-      seeds: '/api/seeds'
+      seeds: '/api/seeds',
+      beneficiaries: '/api/beneficiaries',
+      snapshots: '/api/snapshots',
+      admin: '/api/admin',
+      write: '/api/write'
     }
   });
 });

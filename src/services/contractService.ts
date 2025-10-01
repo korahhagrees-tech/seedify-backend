@@ -3,12 +3,14 @@ import { ContractSeedData, ContractSeedMetadata } from '../types/seed';
 import { contractConfig } from '../config/contract';
 import SeedFactoryABI from '../abi/seedfactory-abi.json';
 import SeedNFTABI from '../abi/seednft-abi.json';
+import SnapshotNFTABI from '../abi/snapshotnft-abi.json';
 import DistributorABI from '../abi/distributor-abi.json';
 
 export class ContractService {
   private provider: ethers.JsonRpcProvider;
   private seedFactoryContract: ethers.Contract | null = null;
   private seedNFTContract: ethers.Contract | null = null;
+  private snapshotNFTContract: ethers.Contract | null = null;
   private distributorContract: ethers.Contract | null = null;
   private rateLimitDelay: number = contractConfig.rateLimitDelay;
   private maxRetries: number = contractConfig.maxRetries;
@@ -34,6 +36,15 @@ export class ContractService {
         );
       }
 
+      // Initialize Snapshot NFT contract for snapshot data
+      if (contractConfig.snapshotNFTAddress && contractConfig.snapshotNFTAddress !== '0x0000000000000000000000000000000000000000') {
+        this.snapshotNFTContract = new ethers.Contract(
+          contractConfig.snapshotNFTAddress as string,
+          SnapshotNFTABI,
+          this.provider
+        );
+      }
+
       // Initialize Distributor contract for beneficiary/location data
       if (contractConfig.distributorAddress && contractConfig.distributorAddress !== '0x0000000000000000000000000000000000000000') {
         this.distributorContract = new ethers.Contract(
@@ -46,6 +57,7 @@ export class ContractService {
       // Create dummy contracts for mock data mode
       this.seedFactoryContract = null as any;
       this.seedNFTContract = null as any;
+      this.snapshotNFTContract = null as any;
       this.distributorContract = null as any;
     }
   }
@@ -303,6 +315,7 @@ export class ContractService {
       let location = '';
       let timestamp = 0;
       let blockNumber = 0;
+      let snapshotPrice = '0';
       
       if (this.seedNFTContract) {
         try {
@@ -320,6 +333,18 @@ export class ContractService {
           console.log(`Could not fetch additional data for seed ${seedId}:`, error);
         }
       }
+
+      // Get snapshot price from factory contract
+      if (this.seedFactoryContract) {
+        try {
+          const price = await this.retryWithBackoff(async () => {
+            return await this.seedFactoryContract!.seedSnapshotPrices(seedId);
+          });
+          snapshotPrice = (Number(price) / Math.pow(10, 18)).toFixed(6);
+        } catch (error) {
+          console.log(`Could not fetch snapshot price for seed ${seedId}:`, error);
+        }
+      }
       
       return {
         id: seedId,
@@ -330,7 +355,10 @@ export class ContractService {
         exists: true,
         depositAmount: seedInfo.depositAmount,
         withdrawn: seedInfo.withdrawn,
-        snapshotCount: Number(seedInfo.snapshotCount)
+        snapshotCount: Number(seedInfo.snapshotCount),
+        seedImageUrl: undefined, // Will be set by transform service if needed
+        latestSnapshotUrl: undefined, // Will be set by transform service if needed
+        snapshotPrice: snapshotPrice
       };
     } catch (error) {
       console.error(`Error processing seed ${seedId}:`, error);
@@ -358,6 +386,9 @@ export class ContractService {
    * Get contract address
    */
   getContractAddress(): string {
+    if (contractConfig.seedFactoryAddress) {
+      return contractConfig.seedFactoryAddress;
+    }
     if (!this.seedFactoryContract) {
       return '0x0000000000000000000000000000000000000000';
     }
@@ -372,7 +403,64 @@ export class ContractService {
   }
 
   /**
+   * Get snapshot contract address for write operations
+   */
+  getSnapshotContractAddress(): string {
+    return contractConfig.snapshotNFTAddress || '';
+  }
+
+  /**
+   * Get distributor contract address for write operations
+   */
+  getDistributorContractAddress(): string {
+    return contractConfig.distributorAddress || '';
+  }
+
+  /**
    * Get beneficiary data from distributor contract
+   */
+  async getSeedBeneficiaries(seedId: number): Promise<{ code: string; index?: number; name?: string }[]> {
+    // If distributor not configured, return empty
+    if (!this.distributorContract) {
+      console.log('Distributor contract not initialized for getSeedBeneficiaries');
+      return [];
+    }
+
+    try {
+      console.log(`Fetching beneficiaries for seed ${seedId}...`);
+      
+      // Get all beneficiaries and return first 4 (as per your requirement)
+      const allBeneficiaries = await this.getAllBeneficiaries();
+      
+      if (allBeneficiaries.length === 0) {
+        console.log('No beneficiaries found in contract');
+        return [];
+      }
+
+      // Return first 4 beneficiaries for this seed with full details
+      const seedBeneficiaries = allBeneficiaries.slice(0, 4).map((b) => ({
+        code: b.code,
+        index: b.index,
+        name: b.name,
+        percentage: b.percentage,
+        address: b.address,
+        allocatedAmount: b.allocatedAmount,
+        totalClaimed: b.totalClaimed,
+        claimableAmount: b.claimableAmount,
+        isActive: b.isActive,
+        beneficiaryValue: b.beneficiaryValue
+      }));
+
+      console.log(`Found ${seedBeneficiaries.length} beneficiaries for seed ${seedId}:`, seedBeneficiaries);
+      return seedBeneficiaries;
+    } catch (error) {
+      console.error(`Error fetching beneficiaries for seed ${seedId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get comprehensive beneficiary data from distributor contract
    */
   async getBeneficiaryData(beneficiaryIndex: number): Promise<any | null> {
     if (!this.distributorContract) {
@@ -380,17 +468,48 @@ export class ContractService {
     }
 
     try {
-      const beneficiaryData = await this.retryWithBackoff(async () => {
+      // Get basic beneficiary data
+      const beneficiary = await this.retryWithBackoff(async () => {
         return await this.distributorContract!.getBeneficiary(beneficiaryIndex);
       });
 
+      // Get percentage allocation (in basis points, where 10000 = 100%)
+      let percentage = '0.00';
+      try {
+        const perc = await this.retryWithBackoff(async () => {
+          return await this.distributorContract!.getBeneficiaryPercentage(beneficiaryIndex);
+        });
+        // Convert from basis points to percentage: perc / 10000 * 100 = perc / 100
+        const percentageValue = (Number(perc) / 100).toFixed(2);
+        percentage = percentageValue;
+        console.log(`✅ Beneficiary ${beneficiaryIndex} percentage:`, percentage + '%', `(basis points: ${perc})`);
+      } catch (e) {
+        console.error(`❌ Could not fetch percentage for beneficiary ${beneficiaryIndex}:`, e);
+      }
+
+      // Get allocation details
+      let beneficiaryValue = '0';
+      try {
+        const details = await this.retryWithBackoff(async () => {
+          return await this.distributorContract!.getBeneficiaryAllocationDetails(beneficiaryIndex);
+        });
+        beneficiaryValue = details[0].toString(); // beneficiaryValue
+        console.log(`✅ Beneficiary ${beneficiaryIndex} allocation details:`, details);
+      } catch (e) {
+        console.error(`❌ Could not fetch allocation details for beneficiary ${beneficiaryIndex}:`, e);
+      }
+
       return {
         index: beneficiaryIndex,
-        name: beneficiaryData[0],
-        code: beneficiaryData[1],
-        percentage: beneficiaryData[2],
-        address: beneficiaryData[3],
-        isActive: beneficiaryData[4]
+        address: beneficiary[0],
+        name: beneficiary[1],
+        code: beneficiary[2],
+        allocatedAmount: (Number(beneficiary[3]) / Math.pow(10, 18)).toFixed(6),
+        totalClaimed: (Number(beneficiary[4]) / Math.pow(10, 18)).toFixed(6),
+        claimableAmount: (Number(beneficiary[5]) / Math.pow(10, 18)).toFixed(6),
+        isActive: beneficiary[6],
+        percentage: percentage,
+        beneficiaryValue: (Number(beneficiaryValue) / Math.pow(10, 18)).toFixed(6)
       };
     } catch (error) {
       console.error(`Error fetching beneficiary data for index ${beneficiaryIndex}:`, error);
@@ -403,26 +522,64 @@ export class ContractService {
    */
   async getAllBeneficiaries(): Promise<any[]> {
     if (!this.distributorContract) {
+      console.log('Distributor contract not initialized');
       return [];
     }
 
     try {
-      const totalBeneficiaries = await this.retryWithBackoff(async () => {
-        return await this.distributorContract!.getTotalBeneficiaries();
+      console.log('Fetching all beneficiaries from distributor contract...');
+      const result = await this.retryWithBackoff(async () => {
+        return await this.distributorContract!.getAllBeneficiaries();
       });
 
+      console.log('Raw getAllBeneficiaries result:', result);
+
+      // Parse the result - it returns multiple arrays
+      const [addresses, names, codes, allocatedAmounts, totalClaimed, claimableAmounts] = result;
+
       const beneficiaries = [];
-      for (let i = 0; i < Number(totalBeneficiaries); i++) {
+      for (let i = 0; i < addresses.length; i++) {
+        // Get percentage for each beneficiary (in basis points, where 10000 = 100%)
+        let percentage = '0.00';
         try {
-          const beneficiary = await this.getBeneficiaryData(i);
-          if (beneficiary && beneficiary.isActive) {
-            beneficiaries.push(beneficiary);
-          }
-        } catch (error) {
-          console.error(`Error fetching beneficiary ${i}:`, error);
+          const perc = await this.retryWithBackoff(async () => {
+            return await this.distributorContract!.getBeneficiaryPercentage(i);
+          });
+          // Convert from basis points to percentage: perc / 10000 * 100 = perc / 100
+          const percentageValue = (Number(perc) / 100).toFixed(2);
+          percentage = percentageValue;
+          console.log(`Beneficiary ${i} (${codes[i]}) percentage:`, percentage + '%', `(basis points: ${perc})`);
+        } catch (e) {
+          console.error(`Failed to fetch percentage for beneficiary ${i}:`, e);
         }
+
+        // Get allocation details
+        let beneficiaryValue = '0';
+        try {
+          const details = await this.retryWithBackoff(async () => {
+            return await this.distributorContract!.getBeneficiaryAllocationDetails(i);
+          });
+          beneficiaryValue = (Number(details[0]) / Math.pow(10, 18)).toFixed(6);
+          console.log(`Beneficiary ${i} (${codes[i]}) value:`, beneficiaryValue);
+        } catch (e) {
+          console.error(`Failed to fetch allocation details for beneficiary ${i}:`, e);
+        }
+        
+        beneficiaries.push({
+          index: i,
+          address: addresses[i],
+          name: names[i],
+          code: codes[i],
+          allocatedAmount: (Number(allocatedAmounts[i]) / Math.pow(10, 18)).toFixed(6),
+          totalClaimed: (Number(totalClaimed[i]) / Math.pow(10, 18)).toFixed(6),
+          claimableAmount: (Number(claimableAmounts[i]) / Math.pow(10, 18)).toFixed(6),
+          isActive: true, // All beneficiaries from getAllBeneficiaries are active
+          percentage: percentage,
+          beneficiaryValue: beneficiaryValue
+        });
       }
 
+      console.log(`Successfully fetched ${beneficiaries.length} beneficiaries`);
       return beneficiaries;
     } catch (error) {
       console.error('Error fetching all beneficiaries:', error);
@@ -460,6 +617,151 @@ export class ContractService {
   async getLocationFromBeneficiary(beneficiaryIndex: number): Promise<string | null> {
     const beneficiary = await this.getBeneficiaryData(beneficiaryIndex);
     return beneficiary ? beneficiary.code : null;
+  }
+
+  // ==================== SNAPSHOT METHODS ====================
+
+  /**
+   * Get total number of snapshots
+   */
+  async getTotalSnapshots(): Promise<number> {
+    if (!this.snapshotNFTContract) {
+      return 0;
+    }
+
+    try {
+      const total = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getTotalSnapshots();
+      });
+      return Number(total);
+    } catch (error) {
+      console.error('Error fetching total snapshots:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get snapshots for a specific seed
+   */
+  async getSeedSnapshots(seedId: number): Promise<number[]> {
+    if (!this.snapshotNFTContract) {
+      return [];
+    }
+
+    try {
+      const snapshots = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getSeedSnapshots(seedId);
+      });
+      return snapshots.map((id: any) => Number(id));
+    } catch (error) {
+      console.error(`Error fetching snapshots for seed ${seedId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get snapshot count for a specific seed
+   */
+  async getSeedSnapshotCount(seedId: number): Promise<number> {
+    if (!this.snapshotNFTContract) {
+      return 0;
+    }
+
+    try {
+      const count = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getSeedSnapshotCount(seedId);
+      });
+      return Number(count);
+    } catch (error) {
+      console.error(`Error fetching snapshot count for seed ${seedId}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get snapshot data by ID
+   */
+  async getSnapshotData(snapshotId: number): Promise<any | null> {
+    if (!this.snapshotNFTContract) {
+      return null;
+    }
+
+    try {
+      const data = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getSnapshotData(snapshotId);
+      });
+      
+      return {
+        creator: data.creator,
+        value: Number(data.value),
+        beneficiaryIndex: Number(data.beneficiaryIndex),
+        seedId: Number(data.seedId),
+        timestamp: Number(data.timestamp),
+        blockNumber: Number(data.blockNumber),
+        positionInSeed: Number(data.positionInSeed),
+        processId: data.processId
+      };
+    } catch (error) {
+      console.error(`Error fetching snapshot data for ${snapshotId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get snapshots for a specific beneficiary
+   */
+  async getBeneficiarySnapshots(beneficiaryIndex: number): Promise<number[]> {
+    if (!this.snapshotNFTContract) {
+      return [];
+    }
+
+    try {
+      const snapshots = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getBeneficiarySnapshots(beneficiaryIndex);
+      });
+      return snapshots.map((id: any) => Number(id));
+    } catch (error) {
+      console.error(`Error fetching snapshots for beneficiary ${beneficiaryIndex}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get total value raised
+   */
+  async getTotalValueRaised(): Promise<string> {
+    if (!this.snapshotNFTContract) {
+      return '0';
+    }
+
+    try {
+      const total = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getTotalValueRaised();
+      });
+      return total.toString();
+    } catch (error) {
+      console.error('Error fetching total value raised:', error);
+      return '0';
+    }
+  }
+
+  /**
+   * Get latest snapshot ID for a seed
+   */
+  async getLatestSnapshotId(seedId: number): Promise<number | null> {
+    if (!this.snapshotNFTContract) {
+      return null;
+    }
+
+    try {
+      const latestId = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getLatestSnapshotId(seedId);
+      });
+      return Number(latestId);
+    } catch (error) {
+      console.error(`Error fetching latest snapshot for seed ${seedId}:`, error);
+      return null;
+    }
   }
 }
 

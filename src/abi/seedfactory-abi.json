@@ -13,12 +13,12 @@
         "internalType": "address"
       },
       {
-        "name": "_snapshotContract",
+        "name": "_pool",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_pool",
+        "name": "_distributor",
         "type": "address",
         "internalType": "address"
       },
@@ -39,6 +39,11 @@
       },
       {
         "name": "_lockPeriodSeconds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_defaultSnapshotPrice",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -74,12 +79,12 @@
   },
   {
     "type": "function",
-    "name": "claimSeedProfits",
+    "name": "claimPoolInterest",
     "inputs": [
       {
-        "name": "seedId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "distributeImmediately",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "outputs": [],
@@ -90,6 +95,11 @@
     "name": "createSeed",
     "inputs": [
       {
+        "name": "seedReceiver",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "snapshotPrice",
         "type": "uint256",
         "internalType": "uint256"
@@ -98,6 +108,11 @@
         "name": "location",
         "type": "string",
         "internalType": "string"
+      },
+      {
+        "name": "beneficiaryIndexList",
+        "type": "uint256[4]",
+        "internalType": "uint256[4]"
       }
     ],
     "outputs": [
@@ -124,6 +139,19 @@
   },
   {
     "type": "function",
+    "name": "defaultSnapshotPrice",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "depositForSeed",
     "inputs": [
       {
@@ -134,6 +162,19 @@
     ],
     "outputs": [],
     "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "distributor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IDistributor"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -207,6 +248,19 @@
   },
   {
     "type": "function",
+    "name": "getDistributor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getDynamicSeedPercentage",
     "inputs": [
       {
@@ -227,6 +281,19 @@
   {
     "type": "function",
     "name": "getPool",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSeedContract",
     "inputs": [],
     "outputs": [
       {
@@ -393,7 +460,7 @@
   },
   {
     "type": "function",
-    "name": "increaseSeedDeposit",
+    "name": "isSeedEarlyWithdrawn",
     "inputs": [
       {
         "name": "seedId",
@@ -401,8 +468,14 @@
         "internalType": "uint256"
       }
     ],
-    "outputs": [],
-    "stateMutability": "payable"
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -482,7 +555,7 @@
       {
         "name": "",
         "type": "address",
-        "internalType": "contract AavePool"
+        "internalType": "contract IAavePoolContract"
       }
     ],
     "stateMutability": "view"
@@ -535,6 +608,25 @@
   },
   {
     "type": "function",
+    "name": "seedEarlyWithdrawn",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "seedFee",
     "inputs": [],
     "outputs": [
@@ -564,7 +656,7 @@
     "name": "seedSnapshotPrices",
     "inputs": [
       {
-        "name": "",
+        "name": "seedId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -622,6 +714,32 @@
     "inputs": [
       {
         "name": "newBurnRecipient",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setDefaultSnapshotPrice",
+    "inputs": [
+      {
+        "name": "_newDefaultSnapshotPrice",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setDistributor",
+    "inputs": [
+      {
+        "name": "_newDistributor",
         "type": "address",
         "internalType": "address"
       }
@@ -784,39 +902,13 @@
   },
   {
     "type": "function",
-    "name": "setSnapshotContract",
-    "inputs": [
-      {
-        "name": "_newSnapshotContract",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "snapFactory",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "snapshotContract",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract SnapshotNFT"
+        "internalType": "address payable"
       }
     ],
     "stateMutability": "view"
@@ -867,6 +959,24 @@
     "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "withdrawSeedDepositTo",
+    "inputs": [
+      {
+        "name": "seedId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "destination",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "event",
     "name": "BurnRecipientUpdated",
     "inputs": [
@@ -881,6 +991,25 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DefaultSnapshotPriceUpdated",
+    "inputs": [
+      {
+        "name": "oldPrice",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newPrice",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -956,6 +1085,25 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EmergencyWithdrawal",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1222,6 +1370,31 @@
   },
   {
     "type": "event",
+    "name": "SeedEarlyWithdrawn",
+    "inputs": [
+      {
+        "name": "seedId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "userAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "taxAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "SeedFeeUpdated",
     "inputs": [
       {
@@ -1405,6 +1578,211 @@
   },
   {
     "type": "error",
+    "name": "AlreadyWithdrawn",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BeneficiaryAddressIsZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "BeneficiaryNotActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CannotSetMaxSeedsLowerThanCurrentSeedCount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DefaultSnapshotPriceMustBeGreaterThanZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DepositTooLargeForCalculation",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ETHTransferToBurnRecipientFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ETHTransferToDestinationFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FactoryLockedOnlyOwnerOrSeedersAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FeeTransferFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientContractBalance",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientPaymentForMinimumSeedPriceAndFee",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidBasisPointsCalculation",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidBeneficiaryIndex",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidBurnRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDestinationAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDistributorAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidFeeRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewBurnRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewDefaultSnapshotPrice",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewDistributorAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewFeeRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewLockPeriodSeconds",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewPoolAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewSeedContractAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewSnapFactoryAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidNewSnapshotPrice",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidOwnerAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidPoolAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidRecipientAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSeedContractAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSeedID",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSeederAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LocationCannotBeEmpty",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LockPeriodMustBeGreaterThanZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MaxSeedsMustBeGreaterThanZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MustSendETH",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoDepositForSeed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoInterestToClaim",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotSeedHolder",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OnlyOwnerOrDistributorOperatorCanClaimInterest",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "OwnableInvalidOwner",
     "inputs": [
       {
@@ -1424,5 +1802,55 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "PaymentAmountMustBeGreaterThanZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PaymentTransferFailed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SeedCapReached",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SeedDoesNotExist",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SeedFeeCannotExceed100Percent",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SeedFeeCannotExceed100PercentBasisPoints",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SeedPriceMustBeGreaterThanZero",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SnapshotPriceMustBeGreaterThanOrEqualToDefault",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TaxAmountExceedsOriginalDeposit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "WithdrawalFailedReceivedZeroETH",
+    "inputs": []
   }
 ]

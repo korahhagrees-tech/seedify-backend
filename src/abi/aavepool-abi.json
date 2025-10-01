@@ -26,11 +26,6 @@
         "name": "_factory",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "_snapFactory",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -112,7 +107,7 @@
   },
   {
     "type": "function",
-    "name": "emergencyWithdrawETH",
+    "name": "emergencyWithdraw",
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
@@ -274,32 +269,6 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setSnapFactory",
-    "inputs": [
-      {
-        "name": "_snapFactory",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "snapFactory",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",

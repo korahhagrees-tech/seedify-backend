@@ -1,5 +1,5 @@
-import { Seed, SeedSummary, ContractSeedData, Location, EcosystemProject, WayOfFlowersData, SeedMetadata } from '../types/seed';
-import { mappingService } from './mappingService';
+import { Seed, SeedSummary, ContractSeedData, Location, EcosystemProject, WayOfFlowersData, SeedMetadata, BeneficiaryRef } from '../types/seed';
+import { ecosystemMappingService } from './ecosystemMappingService';
 import { contractService } from './contractService';
 
 export class SeedTransformService {
@@ -112,8 +112,8 @@ export class SeedTransformService {
       ? (Number(contractData.depositAmount) / Math.pow(10, 18)).toFixed(4)
       : '0.0000';
 
-    // Get location name from mapping service
-    const locationMapping = mappingService.getLocationMapping(contractData.location || '');
+    // Get location name from ecosystem mapping service or use contract location directly
+    const locationMapping = ecosystemMappingService.getMapping(contractData.location || '');
     const locationName = locationMapping ? locationMapping.locationName : contractData.location || 'Unknown Location';
 
     return {
@@ -121,12 +121,12 @@ export class SeedTransformService {
       label: `Seed #${contractData.id}`,
       name: `Digital Flower ${contractData.id}`,
       description: `A beautiful digital flower planted in ${locationName}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
-      seedImageUrl: `/images/seeds/seed-${contractData.id}.png`,
-      latestSnapshotUrl: contractData.snapshotCount && contractData.snapshotCount > 0 ? `/images/snapshots/snapshot-${contractData.id}-latest.png` : null,
+      seedImageUrl: contractData.seedImageUrl || `/images/seeds/seed-${contractData.id}.png`,
+      latestSnapshotUrl: contractData.latestSnapshotUrl || (contractData.snapshotCount && contractData.snapshotCount > 0 ? `/images/snapshots/snapshot-${contractData.id}-latest.png` : null),
       snapshotCount: contractData.snapshotCount || 0,
       owner: contractData.owner,
       depositAmount: depositAmount,
-      snapshotPrice: (Math.random() * 0.01 + 0.001).toFixed(6), // Mock data - would need factory contract
+      snapshotPrice: contractData.snapshotPrice || '0.000000',
       isWithdrawn: contractData.withdrawn || false,
       isLive: isRecent,
       metadata: {
@@ -148,7 +148,7 @@ export class SeedTransformService {
   /**
    * Transform contract data to frontend Seed format (for getSeedById)
    */
-  transformContractDataToSeed(contractData: ContractSeedData): Seed {
+  async transformContractDataToSeed(contractData: ContractSeedData): Promise<Seed> {
     const createdDate = new Date(contractData.timestamp * 1000);
     const isRecent = (Date.now() - createdDate.getTime()) < (7 * 24 * 60 * 60 * 1000); // 7 days
 
@@ -157,49 +157,59 @@ export class SeedTransformService {
       ? (Number(contractData.depositAmount) / Math.pow(10, 18)).toFixed(4)
       : '0.0000';
 
-    // Get complete hierarchy from mapping service
-    const locationMapping = mappingService.getLocationMapping(contractData.location || '');
-    const locationName = locationMapping ? locationMapping.locationName : contractData.location || 'Unknown Location';
-    const ecosystemProject = locationMapping ? locationMapping.ecosystemProject : null;
-    const wayOfFlowersData = locationMapping ? locationMapping.wayOfFlowersData : null;
+    // Beneficiaries: exactly four per seed if possible
+    let beneficiaries: BeneficiaryRef[] = [];
+    try {
+      const refs = await contractService.getSeedBeneficiaries(contractData.id);
+      beneficiaries = (refs || []).slice(0, 4);
+    } catch (_e) {
+      beneficiaries = [];
+    }
 
-    // Create location object
-    const location: Location = {
-      id: contractData.location || 'unknown',
-      name: locationName,
-      slug: (contractData.location || 'unknown').toLowerCase(),
-      image: `/images/locations/${contractData.location || 'default'}.jpg`,
-      position: {
-        top: '50%',
-        left: '50%',
-        width: '100px',
-        height: '100px',
-        transform: 'translate(-50%, -50%)'
-      },
-      labelPosition: {
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)'
+    // Fallback to first 4 known mappings if not provided by contract
+    if (beneficiaries.length < 4) {
+      const allMappings = ecosystemMappingService.getAllMappings();
+      for (let i = 0; i < 4; i++) {
+        const m = allMappings[i % allMappings.length];
+        if (!beneficiaries.find(b => b.code === m.locationCode)) {
+          beneficiaries.push({ code: m.locationCode, name: m.locationName, index: i });
+        }
+        if (beneficiaries.length === 4) break;
       }
+    }
+
+    // Derive ecosystem projects from beneficiaries (NOT from contract!)
+    const ecosystemProjects: EcosystemProject[] | undefined = beneficiaries
+      .map(b => ecosystemMappingService.getMapping(b.code))
+      .filter((m): m is NonNullable<typeof m> => !!m)
+      .map(m => m.ecosystemProject);
+
+    // Way of Flowers data is NOT from contract - return empty object structure for frontend
+    const wayOfFlowers: WayOfFlowersData = {
+      backgroundImageUrl: '',
+      seedEmblemUrl: '',
+      firstText: '',
+      secondText: '',
+      thirdText: '',
+      mainQuote: '',
+      author: ''
     };
 
-    // Create ecosystem projects array (only for this specific location)
-    const ecosystemProjects: EcosystemProject[] = ecosystemProject ? [ecosystemProject] : [];
-
-    // Create way of flowers data
-    const wayOfFlowers: WayOfFlowersData = wayOfFlowersData || this.mockWayOfFlowersData;
+    // Location string from contract is informational only; do not expose `locations` in response
+    const locationName = ecosystemMappingService.getMapping(contractData.location || '')?.locationName
+      || contractData.location || 'Unknown';
 
     return {
       id: contractData.id.toString(),
       label: `Seed #${contractData.id}`,
       name: `Digital Flower ${contractData.id}`,
       description: `A beautiful digital flower planted in ${locationName}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
-      seedImageUrl: `/images/seeds/seed-${contractData.id}.png`,
-      latestSnapshotUrl: contractData.snapshotCount && contractData.snapshotCount > 0 ? `/images/snapshots/snapshot-${contractData.id}-latest.png` : null,
+      seedImageUrl: contractData.seedImageUrl || `/images/seeds/seed-${contractData.id}.png`,
+      latestSnapshotUrl: contractData.latestSnapshotUrl || (contractData.snapshotCount && contractData.snapshotCount > 0 ? `/images/snapshots/snapshot-${contractData.id}-latest.png` : null),
       snapshotCount: contractData.snapshotCount || 0,
       owner: contractData.owner,
       depositAmount: depositAmount,
-      snapshotPrice: (Math.random() * 0.01 + 0.001).toFixed(6), // Mock data - would need factory contract
+      snapshotPrice: contractData.snapshotPrice || '0.000000',
       isWithdrawn: contractData.withdrawn || false,
       isLive: isRecent,
       metadata: {
@@ -215,9 +225,11 @@ export class SeedTransformService {
           { trait_type: 'Owner', value: contractData.owner }
         ]
       },
-      locations: [location], // Only include the specific location for this seed
-      ecosystemProjects: ecosystemProjects, // Only include the ecosystem project for this location
-      wayOfFlowersData: wayOfFlowers // Include the way of flowers data for this location
+      location: locationName, // Single location string from contract
+      ecosystemProjects: ecosystemProjects.length > 0 ? ecosystemProjects : undefined, // Optional: mapped from location
+      wayOfFlowersData: wayOfFlowers, // NOT from contract - empty object for frontend to populate
+      story: { title: '', author: '', story: '' }, // NOT from contract - empty object for frontend to populate
+      beneficiaries
     };
   }
 
@@ -233,10 +245,13 @@ export class SeedTransformService {
   /**
    * Transform multiple contract data to frontend Seed format (for getSeedById)
    */
-  transformContractDataToSeeds(contractDataArray: ContractSeedData[]): Seed[] {
-    return contractDataArray
-      .filter(data => data.exists)
-      .map(data => this.transformContractDataToSeed(data));
+  async transformContractDataToSeeds(contractDataArray: ContractSeedData[]): Promise<Seed[]> {
+    const results: Seed[] = [];
+    for (const data of contractDataArray) {
+      if (!data.exists) continue;
+      results.push(await this.transformContractDataToSeed(data));
+    }
+    return results;
   }
 
   /**
@@ -263,12 +278,75 @@ export class SeedTransformService {
       id,
       owner: `0x${Math.random().toString(16).substr(2, 40)}`,
       location: this.mockLocations[id % this.mockLocations.length].name,
-      timestamp: Math.floor(Date.now() / 1000) - Math.random() * 30 * 24 * 60 * 60, // Random time in last 30 days
+      timestamp: Math.floor(Date.now() / 1000) - Math.random() * 30 * 24 * 60 * 60,
       blockNumber: 1000000 + id,
       exists: true
     };
 
-    return this.transformContractDataToSeed(contractData);
+    const createdDate = new Date(contractData.timestamp * 1000);
+    const isRecent = (Date.now() - createdDate.getTime()) < (7 * 24 * 60 * 60 * 1000);
+
+    const depositAmount = contractData.depositAmount 
+      ? (Number(contractData.depositAmount) / Math.pow(10, 18)).toFixed(4)
+      : '0.0000';
+
+    const locationMapping = ecosystemMappingService.getMapping(contractData.location || '');
+    const locationName = locationMapping ? locationMapping.locationName : contractData.location || 'Unknown Location';
+    const ecosystemProject = locationMapping ? locationMapping.ecosystemProject : null;
+    const wayOfFlowersData = locationMapping ? locationMapping.wayOfFlowersData : this.mockWayOfFlowersData;
+
+    const location: Location = {
+      id: contractData.location || 'unknown',
+      name: locationName,
+      slug: (contractData.location || 'unknown').toLowerCase(),
+      image: `/images/locations/${contractData.location || 'default'}.jpg`,
+      position: {
+        top: '50%',
+        left: '50%',
+        width: '100px',
+        height: '100px',
+        transform: 'translate(-50%, -50%)'
+      },
+      labelPosition: {
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)'
+      }
+    };
+
+    const ecosystemProjects: EcosystemProject[] = ecosystemProject ? [ecosystemProject] : [];
+
+    return {
+      id: contractData.id.toString(),
+      label: `Seed #${contractData.id}`,
+      name: `Digital Flower ${contractData.id}`,
+      description: `A beautiful digital flower planted in ${locationName}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
+      seedImageUrl: contractData.seedImageUrl || `/images/seeds/seed-${contractData.id}.png`,
+      latestSnapshotUrl: contractData.latestSnapshotUrl || (contractData.snapshotCount && contractData.snapshotCount > 0 ? `/images/snapshots/snapshot-${contractData.id}-latest.png` : null),
+      snapshotCount: contractData.snapshotCount || 0,
+      owner: contractData.owner,
+      depositAmount: depositAmount,
+      snapshotPrice: (Math.random() * 0.01 + 0.001).toFixed(6),
+      isWithdrawn: false,
+      isLive: isRecent,
+      metadata: {
+        exists: contractData.exists,
+        attributes: [
+          { trait_type: 'Type', value: 'Seed' },
+          { trait_type: 'Token ID', value: contractData.id },
+          { trait_type: 'Location', value: locationName },
+          { trait_type: 'Created', value: createdDate.toISOString() },
+          { trait_type: 'Deposit Amount', value: depositAmount },
+          { trait_type: 'Snapshot Count', value: contractData.snapshotCount || 0 },
+          { trait_type: 'Withdrawn', value: 'No' },
+          { trait_type: 'Owner', value: contractData.owner }
+        ]
+      },
+      location: locationName, // Single location string from contract
+      ecosystemProjects: ecosystemProjects,
+      wayOfFlowersData: wayOfFlowersData,
+      beneficiaries: []
+    };
   }
 
   /**

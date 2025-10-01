@@ -1,78 +1,102 @@
 ## SeedNFT
 
-- User interactions (public)
-  - (none; seeds are minted via factory)
-- Views (user-relevant)
-  - getSeedsByOwner(address owner) returns (uint256[])
-  - getSeedMetadata(uint256 seedId) returns (uint256 timestamp, uint256 blockNumber)
-  - getSeedLocation(uint256 seedId) returns (string)
-  - seedCreationTime(uint256 seedId) returns (uint256)
-  - tokenURI(uint256 tokenId) returns (string)
-  - getTotalSeeds() returns (uint256)
+Purpose: ERC721 Seed tokens with metadata and location.
+
+- Client (read)
+  - getTotalSeeds(): total existing seeds
+  - getSeedByIndex(index): seedId
+  - getSeedMetadata(seedId): { timestamp, blockNumber }
+  - getSeedLocation(seedId): string
+  - seedCreationTime(seedId), seedCreationBlock(seedId)
+  - getSeedsByOwner(owner), ownerOf(tokenId), balanceOf(owner)
+  - tokenURI(tokenId), seedURI(seedId)
+- User (holder)
+  - setApprovalForAll(operator, approved), approve(to, tokenId)
+  - transferFrom(...), safeTransferFrom(...)
+- Admin
+  - mintSeed(to, snapshotPrice, location)
+  - setBaseURI(baseURI), setContractURI(newContractURI), setFactory(_factory)
 
 ## SeedFactory
 
-- User interactions (permissionless; holder-gated where noted)
-  - withdrawSeedDeposit(uint256 seedId)
-  - withdrawSeedDepositTo(uint256 seedId, address destination)
- - Views (user-relevant)
-  - getTotalSeedCost() returns (uint256)
-  - seedSnapshotPrices(uint256 seedId) returns (uint256)
-  - getSeedInfo(uint256 seedId) returns (address owner, uint256 depositAmount, bool withdrawn, uint256 creationTime, uint256 snapshotCount)
-  - getDepositOwner(uint256 seedId) returns (address)
-  - isSeedEarlyWithdrawn(uint256 seedId) returns (bool)
-  - getDepositAmount(uint256 seedId) returns (uint256)
-  - getUnlockTime(uint256 seedId) returns (uint256)
-  - getDynamicSeedPercentage(uint256 seedId) returns (uint256 percentageBPS)
-  - validateSeedForSnapshot(uint256 seedId) returns (bool)
+Purpose: Seed lifecycle, deposits, pricing, limits.
+
+- Client (read)
+  - getSeedInfo(seedId): { owner, depositAmount, withdrawn, creationTime, snapshotCount }
+  - getDepositAmount(seedId), getDepositOwner(seedId)
+  - getUnlockTime(seedId), validateSeedForSnapshot(seedId)
+  - seedSnapshotPrices(seedId), seedPrice(), seedFee()
+  - currentMaxSeedDeposit(), lockPeriodSeconds(), locked(), maxSeeds()
+  - getTotalDeposits(), getTotalSeedCost(), getTotalSeedValue(), getTotalSeedValue(seedId)
+  - seederAllowance(addr) / getSeederAllowance(account)
+  - seedContract(), snapshotContract(), snapFactory(), pool(), feeRecipient(), burnRecipient()
+- User
+  - depositForSeed(seedId) [payable], increaseSeedDeposit(seedId) [payable]
+  - withdrawSeedDeposit(seedId), withdrawSeedDepositTo(seedId, destination)
+  - makePayment(recipient, amount)
+- Admin
+  - createSeed(snapshotPrice, location) [payable]
+  - setSeedPrice(_newPrice), setSeedFee(_newFee), setSeedSnapshotPrice(seedId, _newPrice)
+  - setMaxSeeds(_newMaxSeeds), recalculateMaxSeedDeposit()
+  - setLockPeriodSeconds(_newLockPeriodSeconds), setLocked(_locked)
+  - setPool(_newPool), setSnapFactory(_newSnapFactory)
+  - setSeedContract(_newSeedContract), setSnapshotContract(_newSnapshotContract)
+  - setBurnRecipient(newBurnRecipient), setFeeRecipient(newFeeRecipient)
+  - setSeederAmount(seeder, amount), claimSeedProfits(seedId)
 
 ## SnapshotNFT
 
-- User interactions (public)
-  - (reads only; snapshots are minted via SnapFactory)
-- Views (user-relevant)
-  - getUserSnapshots(address user) returns (uint256[])
-  - getSeedSnapshotPrice(uint256 seedId) returns (uint256)
-  - getSnapshotData(uint256 snapshotId) returns (SnapshotData)
-  - getSeedSnapshots(uint256 seedId) returns (uint256[])
-  - getBeneficiarySnapshots(uint256 beneficiaryIndex) returns (uint256[])
-  - getSeedSnapshotCount(uint256 seedId) returns (uint256)
-  - getBeneficiaryTotalValue(uint256 beneficiaryIndex) returns (uint256)
-  - getUserSnapshotData(address user) returns (SnapshotData[])
-  - getSeedSnapshotData(uint256 seedId) returns (SnapshotData[])
-  - seedURI(uint256 seedId) returns (string)
-  - tokenURI(uint256 tokenId) returns (string)
-  - getTotalValueRaised() returns (uint256)
+Purpose: ERC721 snapshots with rich data.
+
+- Client (read)
+  - getTotalSnapshots(), getNextSnapshotId(), getLatestSnapshotId(seedId)
+  - getSeedSnapshots(seedId), getSeedSnapshotCount(seedId), getSeedSnapshotPrice(seedId)
+  - getSnapshotData(snapshotId), getSnapshotPositionInSeed(snapshotId)
+  - getUserSnapshots(user), getUserSnapshotData(user)
+  - getBeneficiarySnapshots(beneficiaryIndex), getBeneficiaryTotalValue(beneficiaryIndex)
+  - getTotalValueRaised(), seedURI(seedId), tokenURI(tokenId)
+- Admin
+  - (Snapshots minted via SnapFactory)
 
 ## SnapFactory
 
-- User interactions
-  - (none; snapshot minting may require allowance/lock conditions)
-- Views (user-relevant)
-  - getSeedSnapshotCount(uint256 seedId) returns (uint256)
-  - validateSeedForSnapshot(uint256 seedId) returns (bool)
-  - getUnlockTime(uint256 seedId) returns (uint256)
-  - getDynamicSeedPercentage(uint256 seedId) returns (uint256)
-  - getSeedSnapshotPrice(uint256 seedId) returns (uint256)
-  - getSnapshotPrice(uint256 seedId) returns (uint256)
+Purpose: Snapshot minting, allowances, timing, pricing.
+
+- Client (read)
+  - getSeedSnapshotCount(seedId), validateSeedForSnapshot(seedId)
+  - getUnlockTime(seedId), getDynamicSeedPercentage(seedId)
+  - getSeedSnapshotPrice(seedId)
+  - distributor(), seedFactory(), snapshotContract(), pool(), lockPeriodSeconds(), locked()
+- User
+  - mintSnapshot(seedId, beneficiaryIndex, processId, to, feeRecipient) [payable]
+- Admin
+  - setDistributor(newDistributor), setSnapshotContract(_snapshotContract)
+  - setAdminFeeRecipients(_recipients[], _percentages[])
+  - setLockPeriodSeconds(_newLockPeriodSeconds), setLocked(_locked)
+  - setPool(_pool), setSeedFactory(_newSeedFactory)
+  - setSnapshotAllowance(user, allowance), withdrawAdminFees(amount)
+  - claimPoolInterest(distributeImmediately)
 
 ## Distributor
 
-- User interactions (public)
-  - claimShare(uint256 beneficiaryIndex)
-  - claimAllShares()
-- Views (user-relevant)
-  - getClaimableAmount(uint256 beneficiaryIndex) returns (uint256)
-  - getClaimableAmount(address beneficiaryAddr) returns (uint256)
-  - getBeneficiary(uint256 index) returns (addr, name, code, allocatedAmount, totalClaimed, claimableAmount, active)
-  - getAllBeneficiaries() returns (addresses, names, codes, allocatedAmounts, totalClaimed, claimableAmounts)
-  - getBeneficiaryCount() returns (uint256)
-  - getTotalBeneficiarySlots() returns (uint256)
-  - getBeneficiaryName(uint256 index) returns (string)
-  - getBeneficiaryCode(uint256 index) returns (string)
-  - getBeneficiaryByCode(string code) returns (index, addr, name, allocatedAmount, totalClaimed, claimableAmount, active)
-  - getBeneficiaryPercentage(uint256 beneficiaryIndex) returns (uint256 percentageBPS)
-  - isAddressBeneficiary(address addr) returns (bool)
+Purpose: Beneficiary registry and interest distribution.
+
+- Client (read)
+  - getBeneficiary(index), getBeneficiaryByCode(code)
+  - getAllBeneficiaries(), getBeneficiaryCount(), getTotalBeneficiarySlots()
+  - getBeneficiaryName(index), getBeneficiaryCode(index)
+  - getBeneficiaryPercentage(index), getBeneficiaryAllocationDetails(index)
+  - getClaimableAmount(index) / getClaimableAmount(addr)
+  - getDistributionDetails(), getContractState(), totalReceived()
+  - isAddressBeneficiary(addr), isOperator(addr), isCodeExists(code)
+- User
+  - claimShare(beneficiaryIndex), claimAllShares()
+- Admin
+  - addBeneficiary(addr, name, code), updateBeneficiary(index, newAddr), updateBeneficiaryCode(index, newCode)
+  - deactivateBeneficiary(index), reactivateBeneficiary(index)
+  - addOperator(operator), removeOperator(operator)
+  - setSnapshotNFT(newSnapshotNFT), updateFactory(newFactory)
+  - distributeInterest() [payable]
 
 ---
 

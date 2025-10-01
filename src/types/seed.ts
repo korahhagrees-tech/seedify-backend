@@ -44,6 +44,20 @@ export interface WayOfFlowersData {
   author: string;
 }
 
+// Lightweight beneficiary reference for backend responses
+export interface BeneficiaryRef {
+  code: string; // beneficiary code from contracts (acts as ID)
+  name?: string; // optional readable name if available
+  index?: number; // optional index from distributor
+  percentage?: string; // percentage allocation (from getBeneficiaryPercentage)
+  address?: string; // beneficiary address
+  allocatedAmount?: string; // allocated amount in ETH
+  totalClaimed?: string; // total claimed in ETH
+  claimableAmount?: string; // claimable amount in ETH
+  isActive?: boolean; // whether beneficiary is active
+  beneficiaryValue?: string; // total value for beneficiary
+}
+
 export interface Seed {
   id: string;
   label: string;
@@ -59,9 +73,12 @@ export interface Seed {
   isLive: boolean;
   metadata: SeedMetadata;
   // Additional data for components
-  locations: Location[];
-  ecosystemProjects: EcosystemProject[];
-  wayOfFlowersData: WayOfFlowersData;
+  location: string; // Single location string from getSeedLocation(seedId)
+  ecosystemProjects?: EcosystemProject[]; // Optional: mapped from location
+  wayOfFlowersData?: WayOfFlowersData; // Optional: NOT from contract, for frontend only
+  story?: { title: string; author: string; story: string }; // Optional: NOT from contract
+  // Beneficiaries with full details from contract
+  beneficiaries?: BeneficiaryRef[];
 }
 
 export interface SeedSummary {
@@ -103,6 +120,9 @@ export interface ContractSeedData {
   depositAmount?: string;
   withdrawn?: boolean;
   snapshotCount?: number;
+  seedImageUrl?: string;
+  latestSnapshotUrl?: string;
+  snapshotPrice?: string;
 }
 
 export interface ContractSeedMetadata {

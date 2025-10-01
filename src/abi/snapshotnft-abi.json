@@ -105,6 +105,19 @@
   },
   {
     "type": "function",
+    "name": "descriptor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IDescriptor"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "factory",
     "inputs": [],
     "outputs": [
@@ -131,19 +144,6 @@
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getBaseURI",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "string",
-        "internalType": "string"
       }
     ],
     "stateMutability": "view"
@@ -252,6 +252,67 @@
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSeedSnapshotData",
+    "inputs": [
+      {
+        "name": "seedId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct SnapshotNFT.SnapshotData[]",
+        "components": [
+          {
+            "name": "creator",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "value",
+            "type": "uint80",
+            "internalType": "uint80"
+          },
+          {
+            "name": "beneficiaryIndex",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "seedId",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "blockNumber",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "positionInSeed",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "processId",
+            "type": "string",
+            "internalType": "string"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -415,6 +476,67 @@
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getUserSnapshotData",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct SnapshotNFT.SnapshotData[]",
+        "components": [
+          {
+            "name": "creator",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "value",
+            "type": "uint80",
+            "internalType": "uint80"
+          },
+          {
+            "name": "beneficiaryIndex",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "seedId",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "timestamp",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "blockNumber",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "positionInSeed",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "processId",
+            "type": "string",
+            "internalType": "string"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -672,10 +794,10 @@
   },
   {
     "type": "function",
-    "name": "setBaseURI",
+    "name": "setContractURI",
     "inputs": [
       {
-        "name": "baseURI",
+        "name": "newContractURI",
         "type": "string",
         "internalType": "string"
       }
@@ -685,12 +807,12 @@
   },
   {
     "type": "function",
-    "name": "setContractURI",
+    "name": "setDescriptor",
     "inputs": [
       {
-        "name": "newContractURI",
-        "type": "string",
-        "internalType": "string"
+        "name": "_descriptor",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -907,6 +1029,24 @@
     "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "updateBeneficiaryTotalValue",
+    "inputs": [
+      {
+        "name": "beneficiaryIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "event",
     "name": "Approval",
     "inputs": [
@@ -952,19 +1092,6 @@
         "type": "bool",
         "indexed": false,
         "internalType": "bool"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "BaseURISet",
-    "inputs": [
-      {
-        "name": "baseURI",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
       }
     ],
     "anonymous": false

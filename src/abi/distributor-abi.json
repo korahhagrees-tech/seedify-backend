@@ -125,6 +125,13 @@
   },
   {
     "type": "function",
+    "name": "claimAllShares",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "claimShare",
     "inputs": [
       {
@@ -158,6 +165,19 @@
   {
     "type": "function",
     "name": "deactivateBeneficiary",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deleteBeneficiary",
     "inputs": [
       {
         "name": "index",
@@ -496,48 +516,6 @@
   },
   {
     "type": "function",
-    "name": "getCurrentSharePercentage",
-    "inputs": [
-      {
-        "name": "beneficiaryIndex",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "sharePercentage",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getDistributionDetails",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "contractBalance",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "totalValueRaised",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "activeBeneficiaryCount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getPrecisionInfo",
     "inputs": [],
     "outputs": [
@@ -706,6 +684,19 @@
         "name": "",
         "type": "address",
         "internalType": "contract SnapshotNFT"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "totalClaimed",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -970,12 +961,12 @@
   },
   {
     "type": "error",
-    "name": "BeneficiaryAddressAlreadyExists",
+    "name": "BeneficiaryCodeAlreadyExists",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "BeneficiaryCodeAlreadyExists",
+    "name": "BeneficiaryHasUnclaimedFunds",
     "inputs": []
   },
   {

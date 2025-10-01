@@ -112,9 +112,16 @@ export class MockDataService {
             { trait_type: 'Created', value: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString() }
           ]
         },
-        locations: mockLocations,
-        ecosystemProjects: mockEcosystemProjects,
-        wayOfFlowersData: mockWayOfFlowersData
+        // For summaries route, these heavy arrays are not returned; kept for detail only
+        location: mockLocations[i % mockLocations.length].name, // Single location string
+        ecosystemProjects: [mockEcosystemProjects[i % mockEcosystemProjects.length]],
+        wayOfFlowersData: mockWayOfFlowersData,
+        beneficiaries: [
+          { code: 'ELGLOBO', name: 'El Globo Habitat Bank', index: 0 },
+          { code: 'WALKERS', name: 'Walkers Reserve', index: 1 },
+          { code: 'BUENAVISTA', name: 'Buena Vista Heights', index: 2 },
+          { code: 'GRGICH', name: 'Grgich Hills Estate', index: 3 }
+        ]
       };
 
       this.seeds.push(seed);

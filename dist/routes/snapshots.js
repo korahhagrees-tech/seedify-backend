@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const snapshotsController_1 = require("../controllers/snapshotsController");
+const router = (0, express_1.Router)();
+router.get('/seed/:seedId', snapshotsController_1.snapshotsController.listBySeed);
+router.get('/id/:snapshotId', snapshotsController_1.snapshotsController.getById);
+router.get('/beneficiary/:index', snapshotsController_1.snapshotsController.listByBeneficiary);
+router.get('/stats', snapshotsController_1.snapshotsController.stats);
+exports.default = router;

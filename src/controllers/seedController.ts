@@ -99,7 +99,7 @@ export const seedController = {
             seed = seedTransformService.createMockSeed(seedId);
           }
         } else {
-          seed = seedTransformService.transformContractDataToSeed(contractData);
+          seed = await seedTransformService.transformContractDataToSeed(contractData);
         }
       }
 
@@ -172,26 +172,16 @@ export const seedController = {
     try {
       const useMockData = contractConfig.useMockData;
       
-      if (useMockData) {
-        res.json({
-          success: true,
-          data: {
-            usingMockData: true,
-            message: 'Currently using mock data for development',
-            contractAddress: null
-          },
-          timestamp: Date.now()
-        });
-        return;
-      }
-
-      const contractAddress = contractService.getContractAddress();
-      
       res.json({
         success: true,
         data: {
-          usingMockData: false,
-          contractAddress,
+          usingMockData: useMockData,
+          environment: {
+            USE_MOCK_DATA: process.env.USE_MOCK_DATA,
+            SEED_FACTORY_ADDRESS: process.env.SEED_FACTORY_ADDRESS,
+            RPC_URL: process.env.RPC_URL
+          },
+          contractAddress: useMockData ? null : contractService.getContractAddress(),
           provider: 'Base Mainnet'
         },
         timestamp: Date.now()

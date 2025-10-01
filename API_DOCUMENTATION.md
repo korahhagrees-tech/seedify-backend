@@ -17,8 +17,16 @@ USE_MOCK_DATA=true
 
 # Use real contract data
 USE_MOCK_DATA=false
-SEED_NFT_ADDRESS=0xYourActualContractAddress
 RPC_URL=https://mainnet.base.org
+SEED_FACTORY_ADDRESS=0xYourSeedFactory
+SEED_NFT_ADDRESS=0xYourSeedNFT
+SNAPSHOT_NFT_ADDRESS=0xYourSnapshotNFT
+DISTRIBUTOR_ADDRESS=0xYourDistributor
+
+# Optional tuning (defaults shown)
+RATE_LIMIT_DELAY=100
+MAX_RETRIES=3
+BATCH_SIZE=5
 ```
 
 ## API Endpoints
@@ -56,7 +64,7 @@ Simple status check.
 ### Seeds
 
 #### GET /api/seeds
-Get all available seeds.
+Get all available seeds (lightweight summaries). Heavy fields like beneficiaries/ecosystem projects are omitted here.
 
 **Response:**
 ```json
@@ -82,10 +90,7 @@ Get all available seeds.
           { "trait_type": "Type", "value": "Seed" },
           { "trait_type": "Token ID", "value": 1 }
         ]
-      },
-      "locations": [...],
-      "ecosystemProjects": [...],
-      "wayOfFlowersData": {...}
+      }
     }
   ],
   "timestamp": 1704067200000
@@ -93,7 +98,7 @@ Get all available seeds.
 ```
 
 #### GET /api/seeds/:id
-Get a specific seed by ID.
+Get a specific seed by ID. Includes detailed derived data, including beneficiaries and related ecosystem content.
 
 **Parameters:**
 - `id` (number): The seed ID
@@ -119,6 +124,12 @@ Get a specific seed by ID.
       "exists": true,
       "attributes": [...]
     },
+    "beneficiaries": [
+      { "code": "ELGLOBO", "index": 0, "name": "El Globo Habitat Bank" },
+      { "code": "WALKERS", "index": 1, "name": "Walkers Reserve" },
+      { "code": "BUENAVISTA", "index": 2, "name": "Buena Vista Heights" },
+      { "code": "GRGICH", "index": 3, "name": "Grgich Hills Estate" }
+    ],
     "locations": [...],
     "ecosystemProjects": [...],
     "wayOfFlowersData": {...}
@@ -173,9 +184,11 @@ interface Seed {
   isWithdrawn: boolean;
   isLive: boolean;
   metadata: SeedMetadata;
-  locations: Location[];
-  ecosystemProjects: EcosystemProject[];
-  wayOfFlowersData: WayOfFlowersData;
+  // Only on detail endpoint
+  beneficiaries?: Array<{ code: string; index?: number; name?: string }>;
+  locations?: Location[];
+  ecosystemProjects?: EcosystemProject[];
+  wayOfFlowersData?: WayOfFlowersData;
 }
 ```
 
@@ -213,10 +226,10 @@ When `USE_MOCK_DATA=false`, the API connects to the following smart contracts:
 - **Distributor**: Contract for reward distribution
 
 The API uses the following contract functions:
-- `getTotalSeeds()`: Get total number of seeds
-- `getSeedMetadata(seedId)`: Get seed creation data
-- `getSeedLocation(seedId)`: Get seed location
-- `ownerOf(seedId)`: Get seed owner
+- SeedNFT: `getTotalSeeds()`, `getSeedByIndex(index)`, `getSeedMetadata(seedId)`, `getSeedLocation(seedId)`, `ownerOf(seedId)`
+- SeedFactory: `getSeedInfo(seedId)`, `getDepositAmount(seedId)`, `getUnlockTime(seedId)`, `seedSnapshotPrices(seedId)`
+- SnapshotNFT: `getSeedSnapshots(seedId)`, `getSnapshotData(snapshotId)`, `getBeneficiarySnapshots(index)`, `getTotalSnapshots()`, `getTotalValueRaised()`
+- Distributor: `getAllBeneficiaries()`, `getBeneficiary(index)`, `getBeneficiaryByCode(code)`
 
 ## Development
 
@@ -246,12 +259,22 @@ curl http://localhost:3001/api/seeds/count
 
 # Get contract info
 curl http://localhost:3001/api/seeds/contract-info
+
+# Beneficiaries
+curl http://localhost:3001/api/beneficiaries
+curl http://localhost:3001/api/beneficiaries/0
+curl http://localhost:3001/api/beneficiaries/by-code/ELGLOBO
+
+# Snapshots
+curl http://localhost:3001/api/snapshots/seed/1
+curl http://localhost:3001/api/snapshots/id/1001
+curl http://localhost:3001/api/snapshots/beneficiary/0
+curl http://localhost:3001/api/snapshots/stats
 ```
 
 ## Future Enhancements
 
-- Add snapshot endpoints
-- Add beneficiary management endpoints
-- Add real-time updates via WebSocket
-- Add caching layer for better performance
-- Add rate limiting and authentication
+- Admin write endpoints with signer integration
+- Real-time updates via WebSocket
+- Caching layer for better performance
+- Rate limiting and authentication
