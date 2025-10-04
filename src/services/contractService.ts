@@ -346,7 +346,7 @@ export class ContractService {
         }
       }
       
-      return {
+      const seedData = {
         id: seedId,
         owner: seedInfo.owner,
         location: location,
@@ -356,10 +356,57 @@ export class ContractService {
         depositAmount: seedInfo.depositAmount,
         withdrawn: seedInfo.withdrawn,
         snapshotCount: Number(seedInfo.snapshotCount),
-        seedImageUrl: undefined, // Will be set by transform service if needed
-        latestSnapshotUrl: undefined, // Will be set by transform service if needed
+        seedImageUrl: undefined as string | undefined, // Will be fetched below
+        latestSnapshotUrl: undefined as string | undefined, // Will be fetched below
         snapshotPrice: snapshotPrice
       };
+
+      // Fetch real image URLs from contract tokenURI
+      try {
+        const seedImageUrl = await this.getSeedImageUrl(seedId);
+        console.log(`Fetched seed image URL for seed ${seedId}:`, seedImageUrl);
+        if (seedImageUrl) {
+          seedData.seedImageUrl = seedImageUrl;
+        }
+      } catch (error) {
+        console.error(`Error fetching seed image URL for seed ${seedId}:`, error);
+      }
+
+      // Fetch latest snapshot image URL if seed has snapshots
+      if (Number(seedInfo.snapshotCount) > 0) {
+        try {
+          const latestSnapshotUrl = await this.getLatestSnapshotImageUrl(seedId);
+          console.log(`Fetched latest snapshot URL for seed ${seedId}:`, latestSnapshotUrl);
+          if (latestSnapshotUrl) {
+            seedData.latestSnapshotUrl = latestSnapshotUrl;
+          }
+        } catch (error) {
+          console.error(`Error fetching latest snapshot image for seed ${seedId}:`, error);
+        }
+      }
+
+      // Fetch additional seed data (unlock time, profits, dynamic percentage)
+      try {
+        const [unlockTime, profits, dynamicPercentage, totalValue, isEarlyWithdrawn] = await Promise.all([
+          this.getSeedUnlockTime(seedId),
+          this.getSeedAccumulatedProfits(seedId),
+          this.getDynamicSeedPercentage(seedId),
+          this.getTotalSeedValue(seedId),
+          this.isSeedEarlyWithdrawn(seedId)
+        ]);
+
+        return {
+          ...seedData,
+          unlockTime: unlockTime || undefined,
+          accumulatedProfits: profits || undefined,
+          dynamicPercentage: dynamicPercentage || undefined,
+          totalValue: totalValue || undefined,
+          isEarlyWithdrawn: isEarlyWithdrawn
+        };
+      } catch (error) {
+        console.error(`Error fetching extended seed data for seed ${seedId}:`, error);
+        return seedData;
+      }
     } catch (error) {
       console.error(`Error processing seed ${seedId}:`, error);
       return null;
@@ -570,6 +617,392 @@ export class ContractService {
     } catch (error) {
       console.error(`Error fetching snapshot NFT balance for user ${userAddress}:`, error);
       return '0';
+    }
+  }
+
+  /**
+   * Parse base64-encoded tokenURI data from contract
+   * Format: data:application/json;base64,<base64-encoded-json>
+   */
+  private parseTokenURI(tokenURI: string): { name: string; description: string; image: string; attributes: any[] } | null {
+    try {
+      // Check if it's a base64 data URI
+      if (!tokenURI.startsWith('data:application/json;base64,')) {
+        console.warn('TokenURI is not a base64 data URI:', tokenURI);
+        return null;
+      }
+
+      // Extract the base64 part
+      const base64Data = tokenURI.replace('data:application/json;base64,', '');
+      
+      // Decode base64
+      const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
+      
+      // Parse JSON
+      const metadata = JSON.parse(jsonString);
+      
+      // Clean up image URL - remove HTML encoding artifacts like <> tags
+      let imageUrl = metadata.image || '';
+      if (imageUrl) {
+        // Remove ALL < and > characters from the URL (they appear in various positions)
+        // Examples:
+        // <https://...> -> https://...
+        // https://.../\u003Eseed1/... -> https://.../seed1/...
+        // https://...\u003C...> -> https://...
+        imageUrl = imageUrl.replace(/<|>/g, '');
+      }
+      
+      return {
+        name: metadata.name || '',
+        description: metadata.description || '',
+        image: imageUrl,
+        attributes: metadata.attributes || []
+      };
+    } catch (error) {
+      console.error('Error parsing tokenURI:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get seed image URL from tokenURI
+   */
+  async getSeedImageUrl(seedId: number): Promise<string | null> {
+    if (!this.seedNFTContract) {
+      return null;
+    }
+
+    try {
+      const tokenURI = await this.retryWithBackoff(async () => {
+        return await this.seedNFTContract!.tokenURI(seedId);
+      });
+
+      const metadata = this.parseTokenURI(tokenURI);
+      return metadata?.image || null;
+    } catch (error) {
+      console.error(`Error fetching seed image URL for seed ${seedId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get seed metadata from tokenURI (includes image, name, description, attributes)
+   */
+  async getSeedTokenMetadata(seedId: number): Promise<{ name: string; description: string; image: string; attributes: any[] } | null> {
+    if (!this.seedNFTContract) {
+      return null;
+    }
+
+    try {
+      const tokenURI = await this.retryWithBackoff(async () => {
+        return await this.seedNFTContract!.tokenURI(seedId);
+      });
+
+      return this.parseTokenURI(tokenURI);
+    } catch (error) {
+      console.error(`Error fetching seed metadata for seed ${seedId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get latest snapshot image URL for a seed from SnapshotNFT.seedURI()
+   */
+  async getLatestSnapshotImageUrl(seedId: number): Promise<string | null> {
+    if (!this.snapshotNFTContract) {
+      return null;
+    }
+
+    try {
+      const seedURI = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.seedURI(seedId);
+      });
+
+      const metadata = this.parseTokenURI(seedURI);
+      return metadata?.image || null;
+    } catch (error) {
+      console.error(`Error fetching latest snapshot image for seed ${seedId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get snapshot image URL from tokenURI
+   */
+  async getSnapshotImageUrl(snapshotId: number): Promise<string | null> {
+    if (!this.snapshotNFTContract) {
+      return null;
+    }
+
+    try {
+      const tokenURI = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.tokenURI(snapshotId);
+      });
+
+      const metadata = this.parseTokenURI(tokenURI);
+      return metadata?.image || null;
+    } catch (error) {
+      console.error(`Error fetching snapshot image URL for snapshot ${snapshotId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get snapshot metadata from tokenURI (includes image, name, description, attributes)
+   */
+  async getSnapshotTokenMetadata(snapshotId: number): Promise<{ name: string; description: string; image: string; attributes: any[] } | null> {
+    if (!this.snapshotNFTContract) {
+      return null;
+    }
+
+    try {
+      const tokenURI = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.tokenURI(snapshotId);
+      });
+
+      return this.parseTokenURI(tokenURI);
+    } catch (error) {
+      console.error(`Error fetching snapshot metadata for snapshot ${snapshotId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get distributor contract financial state
+   */
+  async getDistributorContractState(): Promise<{
+    contractBalance: string;
+    totalAllocated: string;
+    totalClaimedAll: string;
+    remainingToDistribute: string;
+  } | null> {
+    if (!this.distributorContract) {
+      return null;
+    }
+
+    try {
+      const state = await this.retryWithBackoff(async () => {
+        return await this.distributorContract!.getContractState();
+      });
+
+      return {
+        contractBalance: ethers.formatEther(state.contractBalance),
+        totalAllocated: ethers.formatEther(state.totalAllocated),
+        totalClaimedAll: ethers.formatEther(state.totalClaimedAll),
+        remainingToDistribute: ethers.formatEther(state.remainingToDistribute)
+      };
+    } catch (error) {
+      console.error('Error fetching distributor contract state:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get Aave pool information
+   */
+  async getPoolInfo(): Promise<{
+    totalOriginal: string;
+    currentAToken: string;
+    claimableInterest: string;
+    contractETH: string;
+  } | null> {
+    if (!contractConfig.aavePoolAddress) {
+      return null;
+    }
+
+    try {
+      const AavePoolABI = require('../abi/aavepool-abi.json');
+      const aavePoolContract = new ethers.Contract(
+        contractConfig.aavePoolAddress,
+        AavePoolABI,
+        this.provider
+      );
+
+      const poolInfo = await this.retryWithBackoff(async () => {
+        return await aavePoolContract.getPoolInfo();
+      });
+
+      return {
+        totalOriginal: ethers.formatEther(poolInfo.totalOriginal),
+        currentAToken: ethers.formatEther(poolInfo.currentAToken),
+        claimableInterest: ethers.formatEther(poolInfo.claimableInterest),
+        contractETH: ethers.formatEther(poolInfo.contractETH)
+      };
+    } catch (error) {
+      console.error('Error fetching pool info:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get unlock time for a seed (when deposit can be withdrawn)
+   */
+  async getSeedUnlockTime(seedId: number): Promise<number | null> {
+    if (!this.seedFactoryContract) {
+      return null;
+    }
+
+    try {
+      const unlockTime = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.getUnlockTime(seedId);
+      });
+
+      return Number(unlockTime);
+    } catch (error) {
+      console.error(`Error fetching unlock time for seed ${seedId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get accumulated profits for a seed
+   */
+  async getSeedAccumulatedProfits(seedId: number): Promise<string | null> {
+    if (!this.seedFactoryContract) {
+      return null;
+    }
+
+    try {
+      const profits = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.getAccumulatedProfits(seedId);
+      });
+
+      return ethers.formatEther(profits);
+    } catch (error) {
+      console.error(`Error fetching accumulated profits for seed ${seedId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get dynamic seed percentage (changes over time)
+   */
+  async getDynamicSeedPercentage(seedId: number): Promise<string | null> {
+    if (!this.seedFactoryContract) {
+      return null;
+    }
+
+    try {
+      const percentage = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.getDynamicSeedPercentage(seedId);
+      });
+
+      // Convert basis points to percentage (10000 = 100%)
+      return (Number(percentage) / 100).toFixed(2);
+    } catch (error) {
+      console.error(`Error fetching dynamic percentage for seed ${seedId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get total seed value
+   */
+  async getTotalSeedValue(seedId?: number): Promise<string | null> {
+    if (!this.seedFactoryContract) {
+      return null;
+    }
+
+    try {
+      const value = await this.retryWithBackoff(async () => {
+        if (seedId !== undefined) {
+          return await this.seedFactoryContract!['getTotalSeedValue(uint256)'](seedId);
+        } else {
+          return await this.seedFactoryContract!['getTotalSeedValue()']();
+        }
+      });
+
+      return ethers.formatEther(value);
+    } catch (error) {
+      console.error(`Error fetching total seed value:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if seed was early withdrawn
+   */
+  async isSeedEarlyWithdrawn(seedId: number): Promise<boolean> {
+    if (!this.seedFactoryContract) {
+      return false;
+    }
+
+    try {
+      const isEarlyWithdrawn = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.isSeedEarlyWithdrawn(seedId);
+      });
+
+      return Boolean(isEarlyWithdrawn);
+    } catch (error) {
+      console.error(`Error checking early withdrawal for seed ${seedId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get beneficiary total value from SnapshotNFT
+   */
+  async getBeneficiaryTotalValue(beneficiaryIndex: number): Promise<string | null> {
+    if (!this.snapshotNFTContract) {
+      return null;
+    }
+
+    try {
+      const value = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getBeneficiaryTotalValue(beneficiaryIndex);
+      });
+
+      return ethers.formatEther(value);
+    } catch (error) {
+      console.error(`Error fetching total value for beneficiary ${beneficiaryIndex}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get beneficiary snapshot count
+   */
+  async getBeneficiarySnapshotCount(beneficiaryIndex: number): Promise<number> {
+    if (!this.snapshotNFTContract) {
+      return 0;
+    }
+
+    try {
+      const count = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getBeneficiarySnapshotCount(beneficiaryIndex);
+      });
+
+      return Number(count);
+    } catch (error) {
+      console.error(`Error fetching snapshot count for beneficiary ${beneficiaryIndex}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get claimable interest from Aave pool
+   */
+  async getClaimableInterest(): Promise<string | null> {
+    if (!contractConfig.aavePoolAddress) {
+      return null;
+    }
+
+    try {
+      const AavePoolABI = require('../abi/aavepool-abi.json');
+      const aavePoolContract = new ethers.Contract(
+        contractConfig.aavePoolAddress,
+        AavePoolABI,
+        this.provider
+      );
+
+      const interest = await this.retryWithBackoff(async () => {
+        return await aavePoolContract.getClaimableInterest();
+      });
+
+      return ethers.formatEther(interest);
+    } catch (error) {
+      console.error('Error fetching claimable interest:', error);
+      return null;
     }
   }
 

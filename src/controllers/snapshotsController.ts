@@ -16,10 +16,14 @@ export const snapshotsController = {
       for (const snapshotId of snapshotIds) {
         const data = await contractService.getSnapshotData(snapshotId);
         if (data) {
+          // Fetch real image URL from contract
+          const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
+          
           snapshots.push({
             id: snapshotId,
             ...data,
-            valueEth: (data.value / Math.pow(10, 18)).toFixed(6)
+            valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
+            imageUrl: imageUrl || undefined
           });
         }
       }
@@ -44,12 +48,16 @@ export const snapshotsController = {
         return;
       }
       
+      // Fetch real image URL from contract
+      const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
+      
       res.json({ 
         success: true, 
         snapshot: {
           id: snapshotId,
           ...data,
-          valueEth: (data.value / Math.pow(10, 18)).toFixed(6)
+          valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
+          imageUrl: imageUrl || undefined
         }, 
         timestamp: Date.now() 
       });
@@ -72,10 +80,14 @@ export const snapshotsController = {
       for (const snapshotId of snapshotIds) {
         const data = await contractService.getSnapshotData(snapshotId);
         if (data) {
+          // Fetch real image URL from contract
+          const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
+          
           snapshots.push({
             id: snapshotId,
             ...data,
-            valueEth: (data.value / Math.pow(10, 18)).toFixed(6)
+            valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
+            imageUrl: imageUrl || undefined
           });
         }
       }

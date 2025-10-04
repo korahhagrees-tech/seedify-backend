@@ -5,6 +5,36 @@ This document outlines the complete API structure for the Seedify Backend, inclu
 
 **Base URL**: `/api`
 
+## 🆕 Latest Updates (October 2025)
+
+### ✅ **COMPLETE MOCK DATA REMOVAL**
+- **ALL mock data removed** - No fallbacks to fake data
+- Returns empty arrays/objects when data not available
+- Returns 404 when seed doesn't exist
+
+### ✅ **Real Image URLs from Contracts**
+- Seed images now fetched from `SeedNFT.tokenURI()` (returns S3 URLs via base64-encoded JSON)
+- Snapshot images from `SnapshotNFT.tokenURI()`
+- Latest snapshot per seed from `SnapshotNFT.seedURI()`
+- **NO placeholder fallbacks** - empty string if not available
+
+### ✅ **Beneficiary Project Data Integration**
+- Beneficiaries enriched with full project details from `projects.json`
+- Each beneficiary includes: title, subtitle, location, area, description, benefits, moreDetails, backgroundImage
+- **Removed** stupid mock ecosystem projects (Berlin Urban Farms, NYC, Tokyo, London)
+- Project data mapped by beneficiary code (01-GRG → Grgich Hills Estate, etc.)
+
+### ✅ **Enhanced RPC Integration**
+- Supports Alchemy RPC for 300 calls/second (vs 10 on public RPC)
+- Rate limiting with exponential backoff
+- Batched processing to avoid overwhelming RPC providers
+
+### ✅ **Extended Seed Data**
+Seeds now include: `unlockTime`, `accumulatedProfits`, `dynamicPercentage`, `totalValue`, `isEarlyWithdrawn`
+
+### ✅ **Enhanced Beneficiary Data**
+Beneficiaries include: `percentage` (converted from basis points), `totalValue`, `snapshotCount`, **plus full project data**
+
 ## Authentication
 Currently, no authentication is required for read operations. Write operations require wallet interaction on the frontend.
 
@@ -41,6 +71,8 @@ Currently, no authentication is required for read operations. Write operations r
 ### 3. Get All Seeds
 **GET** `/seeds`
 
+**Description:** Returns a lightweight list of all seeds with essential data only.
+
 **Response:**
 ```json
 {
@@ -51,30 +83,22 @@ Currently, no authentication is required for read operations. Write operations r
       "label": "Seed #1",
       "name": "Digital Flower 1",
       "description": "A beautiful digital flower planted in Berlin.",
-      "seedImageUrl": "/images/seeds/seed-1.png",
-      "latestSnapshotUrl": "/images/snapshots/snapshot-1-latest.png",
+      "seedImageUrl": "https://wof-flourishing-backup.s3.amazonaws.com/seed1/seed.png",
+      "latestSnapshotUrl": "https://wof-flourishing-backup.s3.amazonaws.com/seed1/snap1-12-...png",
       "snapshotCount": 12,
       "owner": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
       "depositAmount": "1.0211",
-      "snapshotPrice": "0.004070",
+      "snapshotPrice": "0.011000",
       "isWithdrawn": false,
       "isLive": false,
-      "location": "Berlin",
-      "beneficiaries": [
-        {
-          "code": "01-GRG",
-          "name": "Grgich Hills Estate Regenerative Sheep Grazing",
-          "index": 0,
-          "percentage": "25.00",
-          "address": "0xd2D7441d36569200bA5b7cE9c90623a364dB1297",
-          "allocatedAmount": "0.000000",
-          "totalClaimed": "0.000000",
-          "claimableAmount": "0.000000",
-          "isActive": true,
-          "beneficiaryValue": "0.000000"
-        }
-        // ... 3 more beneficiaries
-      ]
+      "metadata": {
+        "exists": true,
+        "attributes": [
+          { "trait_type": "Type", "value": "Seed" },
+          { "trait_type": "Token ID", "value": 1 },
+          { "trait_type": "Location", "value": "Berlin" }
+        ]
+      }
     }
   ],
   "timestamp": 1234567890
@@ -83,11 +107,13 @@ Currently, no authentication is required for read operations. Write operations r
 
 **Note:** 
 - List view focuses on essential data only
-- `ecosystemProjects`, `wayOfFlowersData`, and `story` are NOT included in list view to keep response lightweight
-- Full detail view (`/seeds/:id`) includes these fields but they may be empty/null as they're not from the contract
+- Beneficiaries, wayOfFlowersData, and story are NOT included to keep response lightweight
+- Use `/seeds/:id` for full detail view
 
 ### 4. Get Seed By ID
 **GET** `/seeds/:id`
+
+**Description:** Returns complete seed data including beneficiaries with enriched project information.
 
 **Response:**
 ```json
@@ -98,12 +124,12 @@ Currently, no authentication is required for read operations. Write operations r
     "label": "Seed #1",
     "name": "Digital Flower 1",
     "description": "A beautiful digital flower planted in Berlin.",
-    "seedImageUrl": "/images/seeds/seed-1.png",
-    "latestSnapshotUrl": "/images/snapshots/snapshot-1-latest.png",
+    "seedImageUrl": "https://wof-flourishing-backup.s3.amazonaws.com/seed1/seed.png",
+    "latestSnapshotUrl": "https://wof-flourishing-backup.s3.amazonaws.com/seed1/snap1-12-...png",
     "snapshotCount": 12,
     "owner": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
     "depositAmount": "1.0211",
-    "snapshotPrice": "0.004070",
+    "snapshotPrice": "0.011000",
     "isWithdrawn": false,
     "isLive": false,
     "metadata": {
@@ -115,16 +141,6 @@ Currently, no authentication is required for read operations. Write operations r
       ]
     },
     "location": "Berlin",
-    "ecosystemProjects": [
-      {
-        "title": "Berlin Urban Farms Collective",
-        "subtitle": "Sustainable urban agriculture",
-        "shortText": "Community farms across Berlin.",
-        "extendedText": "Detailed description...",
-        "backgroundImageUrl": "/images/ecosystems/berlin.png",
-        "seedEmblemUrl": "/images/emblems/berlin.png"
-      }
-    ],
     "wayOfFlowersData": {
       "backgroundImageUrl": "",
       "seedEmblemUrl": "",
@@ -144,15 +160,30 @@ Currently, no authentication is required for read operations. Write operations r
         "code": "01-GRG",
         "name": "Grgich Hills Estate Regenerative Sheep Grazing",
         "index": 0,
-        "percentage": "25.00",
+        "percentage": "14.09",
         "address": "0xd2D7441d36569200bA5b7cE9c90623a364dB1297",
         "allocatedAmount": "0.000000",
         "totalClaimed": "0.000000",
         "claimableAmount": "0.000000",
         "isActive": true,
-        "beneficiaryValue": "0.000000"
+        "beneficiaryValue": "0.000000",
+        "projectData": {
+          "title": "Grgich Hills Estate",
+          "subtitle": "Regenerative Sheep Grazing",
+          "location": "Rutherford, Napa Valley, California",
+          "area": "126.6 hectares",
+          "description": "Across Napa's vineyard terraces, a carefully orchestrated migration unfolds...",
+          "benefits": [
+            "Enhanced nutrient cycling",
+            "Reduced external inputs",
+            "Wildfire mitigation",
+            "Soil carbon storage"
+          ],
+          "moreDetails": "The project represents a sophisticated evolution in sustainable viticulture...",
+          "backgroundImage": "/project_images/01__GRG.png"
+        }
       }
-      // ... 3 more beneficiaries
+      // ... 3 more beneficiaries with full project data
     ]
   },
   "timestamp": 1234567890
@@ -160,11 +191,20 @@ Currently, no authentication is required for read operations. Write operations r
 ```
 
 **Note:** 
-- `ecosystemProjects` is included in response but may be empty array `[]` if no mapping exists (NOT from contract, mapped from location)
-- `wayOfFlowersData` is included in response as an **empty object with empty strings** (NOT from contract, frontend will populate later)
-- `story` is included in response as an **empty object with empty strings** (NOT from contract, frontend will populate later)
-- **These fields are present with empty values so frontend doesn't break**
-- All beneficiary data comes from the Distributor contract and is fully populated
+- `location` is a **string from contract** (e.g., "Berlin") - stored when seed was minted
+- `wayOfFlowersData` and `story` are **empty objects** (NOT from contract, frontend will populate)
+- `beneficiaries` includes **full project data** from `projects.json` mapped by beneficiary code
+- ALL data comes from contracts or `projects.json` - **NO MOCK DATA**
+
+**Error Response (404):**
+```json
+{
+  "success": false,
+  "error": "Seed not found",
+  "message": "Seed with ID 999 does not exist",
+  "timestamp": 1234567890
+}
+```
 
 ### 5. Get Seeds Count
 **GET** `/seeds/count`
@@ -181,6 +221,8 @@ Currently, no authentication is required for read operations. Write operations r
 ### 6. Get All Beneficiaries
 **GET** `/beneficiaries`
 
+**Description:** Returns all beneficiaries with comprehensive data from the Distributor contract.
+
 **Response:**
 ```json
 {
@@ -195,7 +237,7 @@ Currently, no authentication is required for read operations. Write operations r
       "totalClaimed": "0.000000",
       "claimableAmount": "0.000000",
       "isActive": true,
-      "percentage": "2500",
+      "percentage": "14.09",
       "beneficiaryValue": "0.000000"
     }
     // ... more beneficiaries
@@ -205,29 +247,31 @@ Currently, no authentication is required for read operations. Write operations r
 ```
 
 **Beneficiary Data Includes:**
-- `index`: Beneficiary index in contract
+- `index`: Beneficiary index in contract (0-7)
 - `address`: Ethereum address
-- `name`: Full name
-- `code`: Unique code (e.g., "01-GRG")
+- `name`: Full name from contract
+- `code`: Unique code (e.g., "01-GRG", "02-ELG")
 - `allocatedAmount`: Allocated amount in ETH
 - `totalClaimed`: Total claimed in ETH
 - `claimableAmount`: Currently claimable in ETH
 - `isActive`: Whether beneficiary is active
-- `percentage`: Percentage allocation as a **calculated percentage string** (e.g., "14.09", "25.00", "100.00")
-  - Contract returns basis points (10000 = 100%), backend converts to percentage
-  - Example: Contract returns `1409` → Backend returns `"14.09"`
-  - To display: `percentage + '%'` → `"14.09%"`
-- `beneficiaryValue`: Total value for beneficiary in ETH
+- `percentage`: **Converted from basis points** (e.g., contract returns `1409` → backend returns `"14.09"`)
+  - Contract stores as basis points (10000 = 100%)
+  - Backend converts: `basisPoints / 100 = percentage`
+  - Display as: `percentage + '%'` → `"14.09%"`
+- `beneficiaryValue`: Total value raised for this beneficiary in ETH
 
 ### 7. Get Beneficiary By Index
 **GET** `/beneficiaries/:index`
 
-Returns comprehensive beneficiary data including percentage, allocation details, and activity status.
+Returns comprehensive beneficiary data for a specific index.
 
 ### 8. Get Beneficiary By Code
 **GET** `/beneficiaries/code/:code`
 
-Returns beneficiary data by their unique code (e.g., "01-GRG").
+**Example:** `GET /beneficiaries/code/01-GRG`
+
+Returns beneficiary data by their unique code.
 
 ### 9. Get Snapshots By Seed
 **GET** `/snapshots/seed/:seedId`
@@ -307,67 +351,17 @@ Returns all seeds owned by the specified address.
 ### 2. Get User's Seed Count
 **GET** `/users/:address/seeds/count`
 
-**Response:**
-```json
-{
-  "success": true,
-  "count": 3,
-  "owner": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
-  "timestamp": 1234567890
-}
-```
-
 ### 3. Get User's Snapshots
 **GET** `/users/:address/snapshots`
-
-Returns all snapshots created by the user.
-
-**Response:**
-```json
-{
-  "success": true,
-  "snapshots": [
-    {
-      "id": 1,
-      "creator": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
-      "value": 1000000000000000,
-      "valueEth": "0.001000",
-      "beneficiaryIndex": 0,
-      "seedId": 1,
-      "timestamp": 1234567890,
-      "blockNumber": 12345,
-      "positionInSeed": 0,
-      "processId": "process-123"
-    }
-  ],
-  "count": 1,
-  "creator": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
-  "timestamp": 1234567890
-}
-```
 
 ### 4. Get User's Snapshot Count
 **GET** `/users/:address/snapshots/count`
 
-**Response:**
-```json
-{
-  "success": true,
-  "count": 5,
-  "creator": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
-  "timestamp": 1234567890
-}
-```
-
 ### 5. Get User's Snapshot Data (Detailed)
 **GET** `/users/:address/snapshots/data`
 
-Returns detailed snapshot data including all metadata.
-
 ### 6. Get User's Pool Balance
 **GET** `/users/:address/balance`
-
-Returns the user's balance in the Aave pool.
 
 **Response:**
 ```json
@@ -382,8 +376,6 @@ Returns the user's balance in the Aave pool.
 
 ### 7. Get User's Stats
 **GET** `/users/:address/stats`
-
-Comprehensive user statistics.
 
 **Response:**
 ```json
@@ -403,28 +395,6 @@ Comprehensive user statistics.
 
 ### 8. Get User's Portfolio (Complete)
 **GET** `/users/:address/portfolio`
-
-Complete user portfolio with all seeds, snapshots, and summary.
-
-**Response:**
-```json
-{
-  "success": true,
-  "portfolio": {
-    "seeds": [...],
-    "snapshots": [...],
-    "summary": {
-      "totalSeeds": 3,
-      "totalSnapshots": 5,
-      "totalDeposited": "5.123456",
-      "totalSnapshotValue": "0.050000",
-      "poolBalance": "1.234567"
-    }
-  },
-  "user": "0xc4b3CE8DD17F437ba4d9fc8D8e65E05e047792A8",
-  "timestamp": 1234567890
-}
-```
 
 ---
 
@@ -451,111 +421,115 @@ All write endpoints return transaction data that the frontend must execute using
 ### 1. Create Seed
 **POST** `/write/seeds/create`
 
-**Request:**
-```json
-{
-  "snapshotPrice": "0.01",
-  "location": "BERLIN"
-}
-```
-
 ### 2. Deposit to Seed
 **POST** `/write/seeds/:id/deposit`
-
-**Request:**
-```json
-{
-  "amount": "1.5"
-}
-```
 
 ### 3. Withdraw from Seed
 **POST** `/write/seeds/:id/withdraw`
 
-**Request:**
-```json
-{
-  "amount": "1.0"
-}
-```
-
 ### 4. Claim Seed Profits
 **POST** `/write/seeds/:id/claim-profits`
 
-No request body required.
-
 ### 5. Mint Snapshot
 **POST** `/write/snapshots/mint`
-
-**Request:**
-```json
-{
-  "seedId": 1,
-  "beneficiaryIndex": 0,
-  "processId": "process-123",
-  "value": "0.01",
-  "projectCode": "01-GRG"
-}
-```
 
 ---
 
 ## Admin Endpoints
 
-### 1. Add Beneficiary
-**POST** `/write/admin/beneficiaries`
+### 1. Get Admin Statistics
+**GET** `/admin/stats`
 
-**Request:**
+**Response:**
 ```json
 {
-  "beneficiaryAddr": "0x...",
-  "name": "New Beneficiary",
-  "code": "05-NEW",
-  "allocatedAmount": "0.0"
+  "success": true,
+  "stats": {
+    "distributor": {
+      "contractBalance": "10.500000",
+      "totalAllocated": "8.750000",
+      "totalClaimedAll": "2.100000",
+      "remainingToDistribute": "6.650000"
+    },
+    "pool": {
+      "totalOriginal": "50.000000",
+      "currentAToken": "52.345678",
+      "claimableInterest": "2.345678",
+      "contractETH": "0.100000"
+    }
+  },
+  "timestamp": 1234567890
 }
 ```
 
-### 2. Deactivate Beneficiary
-**POST** `/write/admin/beneficiaries/:id/deactivate`
-
-### 3. Reactivate Beneficiary
-**POST** `/write/admin/beneficiaries/:id/reactivate`
-
-### 4. Distribute Interest
-**POST** `/write/admin/distribute-interest`
-
 ---
 
-## Data Sources
+## Data Sources & Contract Mapping
 
-| Field | Source | Available |
-|-------|--------|-----------|
-| **Basic Seed Data** | SeedNFT + SeedFactory Contract | ✅ |
-| **Location** | SeedNFT Contract | ✅ |
-| **Snapshot Price** | SeedFactory Contract | ✅ |
-| **Beneficiaries (Full Data)** | Distributor Contract | ✅ |
-| **Beneficiary Percentage** | Distributor Contract | ✅ |
-| **Beneficiary Allocation** | Distributor Contract | ✅ |
-| **Ecosystem Projects** | Mapping Service (not contract) | ⚠️ In response, may be empty [] |
-| **Way of Flowers Data** | NOT from contract | ⚠️ In response, empty object with empty strings |
-| **Story Data** | NOT from contract | ⚠️ In response, empty object with empty strings |
-| **Images** | Placeholder URLs | ⚠️ Fallback |
+### **Contracts Used:**
+
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| **SeedFactory** | `0xF9CBaA0CEFeADf4BCf4dBDC6810c19C92e4688f8` | Seed financial data, deposits, withdrawals |
+| **SeedNFT** | `0xF1d8b736AFf4A22d9c82C91624FC351fdFb63506` | Seed metadata, location, images |
+| **SnapshotNFT** | `0x5203D3C460ba2d0156c97D8766cCE70b69eDd3A6` | Snapshot data and images |
+| **Distributor** | `0x9142A61188e829BF924CeffF27e8ed8111700C9B` | Beneficiary data and allocations |
+| **AavePool** | `0x973842f397af60F68068CCF6F776b4c466Ae1ca6` | Pool balances and interest |
+
+### **Data Source Breakdown:**
+
+| Field | Source | Details |
+|-------|--------|---------|
+| **Basic Seed Data** | `SeedFactory.getSeedInfo()` | Owner, deposit, withdrawn, timestamp, snapshotCount |
+| **Location** | `SeedNFT.getSeedLocation()` | String stored on-chain (e.g., "Berlin") |
+| **Seed Image** | `SeedNFT.tokenURI()` | Base64-encoded JSON with S3 URL |
+| **Latest Snapshot Image** | `SnapshotNFT.seedURI()` → `tokenURI()` | Base64-encoded JSON with S3 URL |
+| **Snapshot Price** | `SeedFactory.seedSnapshotPrices()` | Price in wei, converted to ETH |
+| **Beneficiaries (contract data)** | `Distributor.getAllBeneficiaries()` | Addresses, names, codes, amounts |
+| **Beneficiary Percentage** | `Distributor.getBeneficiaryPercentage()` | Basis points → percentage |
+| **Beneficiary Project Data** | `projects.json` (local) | Mapped by beneficiary code |
+| **Way of Flowers Data** | NOT from contract | Empty object, frontend populates |
+| **Story Data** | NOT from contract | Empty object, frontend populates |
+
+### **Beneficiary Code → Project Mapping:**
+
+```
+01-GRG → Grgich Hills Estate (Regenerative Sheep Grazing)
+02-ELG → El Globo Habitat Bank (Biodiversity Conservation)
+03-JAG → Jaguar Stewardship (Conservation Network)
+04-BUE → Buena Vista Heights (Forest Preservation)
+05-WAL → Walkers Reserve (Coastal Restoration)
+06-PIM → Pimlico Farm (Regenerative Agriculture)
+07-HAR → Harvey Manning Park (Urban Forest Conservation)
+08-STE → St. Elmo Preservation (Community Conservation)
+```
 
 ---
 
 ## Environment Variables
 
 ```env
+# Data Mode
 USE_MOCK_DATA=false
-SEED_FACTORY_ADDRESS=0x...
-SEED_NFT_ADDRESS=0x...
-SNAPSHOT_NFT_ADDRESS=0x...
-DISTRIBUTOR_ADDRESS=0x...
-RPC_URL=https://mainnet.base.org
+
+# Contract Addresses
+SEED_NFT_ADDRESS=0xF1d8b736AFf4A22d9c82C91624FC351fdFb63506
+SEED_FACTORY_ADDRESS=0xF9CBaA0CEFeADf4BCf4dBDC6810c19C92e4688f8
+SNAPSHOT_NFT_ADDRESS=0x5203D3C460ba2d0156c97D8766cCE70b69eDd3A6
+DISTRIBUTOR_ADDRESS=0x9142A61188e829BF924CeffF27e8ed8111700C9B
+AAVE_POOL_ADDRESS=0x973842f397af60F68068CCF6F776b4c466Ae1ca6
+
+# RPC Configuration
+RPC_URL=https://base-mainnet.g.alchemy.com/v2/YOUR-API-KEY
 RPC_RATE_LIMIT_DELAY=100
 RPC_MAX_RETRIES=3
 RPC_BATCH_SIZE=5
 ```
+
+**RPC Providers:**
+- **Alchemy** (Recommended): 300 calls/second - `https://base-mainnet.g.alchemy.com/v2/YOUR-KEY`
+- **Public Base RPC**: 10 calls/second - `https://mainnet.base.org` (rate limited)
+- **QuickNode**: Custom limits - `https://YOUR-ENDPOINT.quiknode.pro/YOUR-KEY/`
 
 ---
 
@@ -575,36 +549,55 @@ All endpoints return errors in this format:
 **Common HTTP Status Codes:**
 - `200`: Success
 - `400`: Bad Request (invalid parameters)
-- `404`: Not Found
+- `404`: Not Found (seed/beneficiary doesn't exist)
 - `500`: Internal Server Error
 
 ---
 
 ## Important Notes
 
-### Response Structure Philosophy
+### **NO MOCK DATA Policy**
 
-**All fields that the frontend expects are ALWAYS included in the response**, even if the data doesn't exist in the contract:
+When `USE_MOCK_DATA=false`:
+- ✅ **ALL data comes from contracts or `projects.json`**
+- ❌ **NO fallbacks to mock/fake data**
+- ❌ **NO placeholder image URLs**
+- Returns `404` if seed doesn't exist
+- Returns empty array `[]` if no seeds found
+- Returns empty string `""` for images if not available from contract
 
-1. **Contract Data** (populated with real values):
+### **Response Structure Philosophy**
+
+**All fields that the frontend expects are ALWAYS included**, even if empty:
+
+1. **Contract Data** (always populated):
    - Basic seed info, location, snapshot price, beneficiaries
    - These have actual data from the blockchain
 
 2. **Helper/Frontend Data** (included but empty):
-   - `ecosystemProjects`: `[]` or mapped from location if available
-   - `wayOfFlowersData`: Empty object with empty strings `{backgroundImageUrl: '', ...}` (frontend can populate later)
-   - `story`: Empty object with empty strings `{title: '', author: '', story: ''}` (frontend can populate later)
+   - `wayOfFlowersData`: Empty object `{backgroundImageUrl: '', ...}`
+   - `story`: Empty object `{title: '', author: '', story: ''}`
 
-**Why?** This prevents the frontend from breaking when accessing these fields. The fields are present in the response structure, they just don't have values because that data isn't stored in the smart contracts.
+3. **Enriched Data** (from `projects.json`):
+   - `beneficiaries[].projectData`: Full project details mapped by code
 
-### General Notes
+**Why?** This prevents the frontend from breaking when accessing these fields. The fields exist in the response, they just don't have values because that data isn't in the smart contracts.
 
-1. **Contract Data Only**: When `USE_MOCK_DATA=false`, all data comes from smart contracts
-2. **Beneficiary Data**: Comprehensive beneficiary data includes percentage, allocation details, and all related fields
-3. **Optional Fields**: `ecosystemProjects`, `wayOfFlowersData`, and `story` are PRESENT in response but may be empty/null
-4. **Write Operations**: All write operations return transaction data for frontend execution
-5. **Rate Limiting**: RPC calls are rate-limited and batched to avoid "over rate limit" errors
-6. **Fallback Data**: Image URLs fall back to placeholder paths if not available from metadata
+### **Percentage Calculation**
+
+Contracts store percentages as **basis points** (10000 = 100%):
+```
+Contract: getBeneficiaryPercentage(0) → 1409 (basis points)
+Backend: Converts to "14.09" (percentage)
+Frontend: Display as "14.09%"
+```
+
+### **Image URLs**
+
+- Fetched from `tokenURI()` and `seedURI()` which return base64-encoded JSON
+- Backend decodes and extracts image URL
+- Cleans HTML encoding artifacts (`<`, `>`)
+- Returns real S3 URLs (e.g., `https://wof-flourishing-backup.s3.amazonaws.com/...`)
 
 ---
 
@@ -619,39 +612,54 @@ const { seed } = await response.json();
 
 // ✅ These fields ALWAYS exist and have contract data:
 console.log(seed.id);              // "1"
-console.log(seed.location);        // "Berlin"
-console.log(seed.snapshotPrice);   // "0.004070"
-console.log(seed.beneficiaries);   // [{code: "01-GRG", percentage: "14.09", ...}, ...]
+console.log(seed.location);        // "Berlin" (from contract)
+console.log(seed.snapshotPrice);   // "0.011000"
+console.log(seed.seedImageUrl);    // "https://wof-flourishing-backup.s3.amazonaws.com/seed1/seed.png"
 
-// ⚠️ These fields ALWAYS exist but may be empty (not from contract):
-console.log(seed.ecosystemProjects); // [] or [{...}] if mapped from location
-console.log(seed.wayOfFlowersData);  // {backgroundImageUrl: '', seedEmblemUrl: '', ...} - empty strings
+// ✅ Beneficiaries with full project data:
+console.log(seed.beneficiaries[0].code);              // "01-GRG"
+console.log(seed.beneficiaries[0].percentage);        // "14.09"
+console.log(seed.beneficiaries[0].projectData.title); // "Grgich Hills Estate"
+console.log(seed.beneficiaries[0].projectData.location); // "Rutherford, Napa Valley, California"
+
+// ⚠️ These fields ALWAYS exist but are empty (not from contract):
+console.log(seed.wayOfFlowersData);  // {backgroundImageUrl: '', ...} - empty strings
 console.log(seed.story);             // {title: '', author: '', story: ''} - empty strings
 
-// Frontend can safely access these without checking if they exist:
-const hasEcosystem = seed.ecosystemProjects?.length > 0;
-const needsStory = seed.story.title === ''; // Frontend knows to populate from own source
-const needsWayOfFlowers = seed.wayOfFlowersData.firstText === ''; // Frontend knows to populate
+// Frontend can safely check if they need population:
+const needsStory = seed.story.title === ''; // true - frontend should populate
+const needsWayOfFlowers = seed.wayOfFlowersData.firstText === ''; // true
 ```
 
-### Writing Seed Data
+### Displaying Beneficiary Data
 
 ```typescript
-// Create new seed
-const txDataResponse = await fetch('/api/write/seeds/create', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    snapshotPrice: "0.01",
-    location: "BERLIN"
-  })
+// Beneficiaries include full project information
+seed.beneficiaries.forEach(ben => {
+  console.log(`${ben.code}: ${ben.percentage}%`);
+  console.log(`Project: ${ben.projectData.title}`);
+  console.log(`Location: ${ben.projectData.location}`);
+  console.log(`Benefits: ${ben.projectData.benefits.join(', ')}`);
 });
-
-const { data } = await txDataResponse.json();
-// Execute transaction with wallet
-const tx = await contract[data.functionName](...data.args, {
-  value: data.value
-});
-await tx.wait();
 ```
 
+---
+
+## Performance & Rate Limiting
+
+### **Contract Calls Per Request:**
+
+- `/api/seeds` (list): **~12 calls per seed**
+- `/api/seeds/:id` (detail): **~20+ calls** (includes beneficiary data)
+
+### **Recommendations:**
+
+1. **Use Alchemy RPC** for 300 calls/second (vs 10 on public RPC)
+2. **Implement caching** (Redis/Memory) for beneficiary data
+3. **Consider multicall contract** to batch multiple reads into one call
+4. **Increase rate limit delays** if still hitting limits
+
+---
+
+**Last Updated:** October 2025
+**Version:** 2.0 (Mock Data Removal + Project Integration)

@@ -1,0 +1,134 @@
+{
+  "projects": [
+    {
+      "id": "1",
+      "title": "Grgich Hills Estate",
+      "subtitle": "Regenerative Sheep Grazing",
+      "location": "Rutherford, Napa Valley, California",
+      "area": "126.6 hectares",
+      "description": "Across Napa's vineyard terraces, a carefully orchestrated migration unfolds each season as sheep move through precise rotational patterns, their grazing transforming soil chemistry with each methodical step. This ancient practice, refined through contemporary ecological science, quietly rebuilds the underground architecture that sustains both wine and wildland.",
+      "benefits": [
+        "Enhanced nutrient cycling",
+        "Reduced external inputs",
+        "Wildfire mitigation",
+        "Soil carbon storage"
+      ],
+      "moreDetails": "The project represents a sophisticated evolution in sustainable viticulture, where high-density rotational grazing serves as both ecological restoration tool and climate adaptation strategy. Since 2021, this pioneering collaboration has integrated Kaos Sheep Outfit's skilled shepherding expertise with Grgich Hills' decades of organic farming leadership, creating a comprehensive approach to soil health enhancement.\n\nThe methodology employs targeted grazing patterns designed to optimize nutrient cycling while reducing external agricultural inputs, effectively transforming vineyard understory management into active carbon storage. This approach generates measurable improvements in soil organic matter, water retention capacity, and biodiversity support while providing critical wildfire fuel reduction across the vulnerable Rutherford AVA landscape.\n\nThe project establishes protocols for vineyard-integrated grazing that demonstrate how traditional pastoral practices can be precisely calibrated using contemporary monitoring technologies to achieve quantifiable ecosystem restoration outcomes within premium wine production systems.",
+      "backgroundImage": "/project_images/01__GRG.png"
+    },
+    {
+      "id": "2",
+      "title": "El Globo Habitat Bank",
+      "subtitle": "Biodiversity Conservation",
+      "location": "Cuchilla Jardín-Támesis District, Colombian Andes",
+      "area": "439+ species",
+      "description": "High in the Jardín-Támesis Ridge, fragments of pristine cloud forest operate as biological sanctuaries where Yellow-eared Parrots, Spectacled Bears, and endemic orchid species thrive under the watchful protection of community guardians. Each preserved corridor functions as a bridge between isolated ecosystems, connecting habitats for countless bird and mammal species across Colombia's most biodiverse mountains.",
+      "benefits": [
+        "Protection of 439+ documented species",
+        "Water regulation and carbon sequestration",
+        "Community income generation",
+        "Biological corridor preservation"
+      ],
+      "moreDetails": "El Globo Habitat Bank encompasses a comprehensive biodiversity conservation strategy across the Jardín-Támesis Ridge biological corridor, protecting critical fragments of high Andean cloud forest that serve as vital habitat for over 290 bird species, 76 mammal species, and numerous endemic flora communities. Developed by Terrasos—Colombia's leading environmental investment specialists—this sophisticated initiative integrates preservation with active restoration, employing advanced ecological interventions including invasive species control, wildlife-friendly infrastructure development, and strategic native forest restoration.\n\nOperating under Colombian Ministry of Environment registration, the project ensures long-term conservation commitments while safeguarding critically endangered species including the Yellow-eared Parrot, Crested Eagle, and Spectacled Bear. The initiative's community integration model provides sustainable income generation for local families through ranger surveillance programs, demonstrating how landscape-scale habitat protection can simultaneously address biodiversity loss and rural economic development. Advanced monitoring systems track species population dynamics and habitat connectivity improvements, establishing El Globo as a replicable model for performance-based conservation within one of the world's most critically threatened mountain ecosystems.",
+      "backgroundImage": "/project_images/02__ELG.png"
+    },
+    {
+      "id": "3",
+      "title": "Jaguar Stewardship in the Pantanal",
+      "subtitle": "Conservation Network",
+      "location": "Serra do Amolar, Corumbá, Mato Grosso do Sul, Brazil",
+      "area": "40,613 hectares",
+      "description": "Where seasonal rhythms dictate the movement of countless species, jaguars emerge as umbrella guardians whose protection ensures the survival of entire wetland communities. This groundbreaking initiative transforms apex predator conservation into measurable environmental impact through next-generation monitoring across continental wetland expanses.",
+      "benefits": [
+        "Jaguar population protection",
+        "Ecosystem-wide biodiversity conservation",
+        "Wildfire prevention",
+        "Sustainable ecotourism development"
+      ],
+      "moreDetails": "The Jaguar Stewardship initiative encompasses a comprehensive conservation strategy across the Serra do Amolar region, protecting critical habitat for jaguars whose territory requirements serve as indicators for entire ecosystem health. Developed by Instituto Homem Pantaneiro in partnership with Ecosystem Regeneration Associates, this groundbreaking project employs advanced monitoring technologies including satellite data analysis, environmental DNA sampling, and AI-powered wildlife camera systems to ensure unprecedented transparency in conservation outcomes.\n\nOperating under the first verified Umbrella Species Stewardship Credits protocol, the initiative integrates wildfire prevention, deforestation mitigation, and human-wildlife conflict reduction while supporting sustainable community development through ecotourism and environmental education programs. The comprehensive approach demonstrates how apex predator conservation can simultaneously address multiple environmental challenges while creating sustainable economic opportunities for local communities. Advanced monitoring systems track jaguar population dynamics and habitat connectivity improvements, establishing this initiative as a replicable model for technology-enhanced conservation within one of the world's most biodiverse wetland ecosystems.",
+      "backgroundImage": "/project_images/03__JAG.png"
+    },
+    {
+      "id": "4",
+      "title": "Buena Vista Heights Conservation Area",
+      "subtitle": "Forest Preservation",
+      "location": "Elizabeth Township, Pennsylvania",
+      "area": "50.14 hectares",
+      "description": "Five miles upstream from the Monongahela River, a forest sanctuary protects the clean water infrastructure that sustains metropolitan Pittsburgh while safeguarding habitat corridors for deer, turkey, and countless woodland species. Here, conservation becomes municipal resilience strategy.",
+      "benefits": [
+        "Carbon storage preservation",
+        "Watershed protection",
+        "Habitat for deer, turkey, and bird species",
+        "Recreational access for hiking, birding, and mountain biking"
+      ],
+      "moreDetails": "Buena Vista Heights Conservation Area encompasses a critical forest preservation strategy across mature deciduous woodlands threatened by residential development pressure in Allegheny County. Developed by Allegheny Land Trust, this initiative protects 40-year-old maple, cherry, and oak-hickory forest communities that serve essential watershed protection functions for the Pittsburgh metropolitan region. Operating under the Urban Forest Carbon Protocol, the project employs avoided emissions methodology to prevent carbon release while maintaining ongoing sequestration capacity within these established forest systems.\n\nThe conservation initiative ensures protection for diverse wildlife populations including white-tailed deer, wild turkey, and numerous bird species while providing recreational access for hiking, birding, and mountain biking activities. Located within the Youghiogheny River Watershed, the project contributes to regional clean water infrastructure and climate resilience while preventing development conversion of critical habitat corridors. Advanced monitoring systems track carbon storage preservation and ecosystem service enhancement, establishing this initiative as a replicable model for urban forest conservation within rapidly developing metropolitan areas.",
+      "backgroundImage": "/project_images/04__BUE.png"
+    },
+    {
+      "id": "5",
+      "title": "Walkers Reserve",
+      "subtitle": "Coastal Restoration & Climate Resilience",
+      "location": "Barbados",
+      "area": "3.3 km coastline, 277 acres",
+      "description": "From the scarred landscape of decades-old extraction emerges a pioneering model of regenerative transformation, where advanced monitoring technologies guide the restoration of critical leatherback turtle habitat and black mangrove sanctuaries. This project demonstrates how industrial sites become foundations for comprehensive ecosystem renewal.",
+      "benefits": [
+        "Storm surge protection",
+        "Critical sea turtle habitat preservation",
+        "Coastal erosion prevention",
+        "Carbon sequestration",
+        "Biodiversity creation and protection"
+      ],
+      "moreDetails": "Walkers Reserve encompasses the Caribbean's most comprehensive post-industrial regeneration strategy, transforming a 50-year sand quarry operation into an integrated coastal resilience and biodiversity restoration initiative across multiple habitat types. The project employs systematic revegetation using pioneer species for primary stabilization, followed by strategic deployment of wind fences across seven zones to accelerate natural dune formation while protecting critical leatherback turtle nesting habitat.\n\nAdvanced monitoring integrates drone geo-referencing, LIDAR topographical analysis, and anemometer networks for real-time ecosystem assessment across Long Pond Estuary, engineered wetlands, and black mangrove sanctuary environments. The initiative encompasses 170,000 plants across 188 species, 20 kilometers of vetiver grass erosion control, and innovative chinampas agricultural systems producing over 1,600 pounds of annual harvest, demonstrating how regenerative practices create both ecological and economic abundance. Archaeological significance spanning 5,000 years of continuous human adaptation creates cultural heritage preservation integrated with cutting-edge ecological science.\n\nThe comprehensive approach establishes Walkers Reserve as the Caribbean's largest regenerative bioregional learning center, providing a replicable model for post-industrial landscape transformation within climate-vulnerable coastal regions.",
+      "backgroundImage": "/project_images/05__WAL.png"
+    },
+    {
+      "id": "6",
+      "title": "Pimlico Farm",
+      "subtitle": "Regenerative Agriculture",
+      "location": "Oxfordshire, United Kingdom",
+      "area": "149.53 hectares",
+      "description": "Where rolling English fields meet cutting-edge soil science, strategic cover crops and minimal disturbance techniques create measurable carbon sequestration across agricultural land that pulses with renewed biological activity. Advanced monitoring reveals the invisible restoration occurring when farming practices align with natural soil processes.",
+      "benefits": [
+        "Soil organic carbon sequestration",
+        "Improved soil structure and hydrological properties",
+        "Reduced fertilizer dependency",
+        "Enhanced crop resilience"
+      ],
+      "moreDetails": "Pimlico Farm encompasses a comprehensive regenerative agriculture strategy across traditional English farmland, transforming conventional mixed farming through innovative soil organic carbon sequestration techniques developed over five decades of continuous family stewardship. The project employs no-till farming practices with strategic cover crops and crop residue incorporation to maximize carbon storage in shallow Oxfordshire soils while maintaining productive crop yields through minimal disturbance techniques.\n\nAdvanced monitoring integrates satellite imagery analysis with ground-truth soil sampling, creating unprecedented precision in tracking soil organic matter improvements and demonstrating measurable increases in soil organic carbon levels. The Harper family's transition from plough-based systems through cattle operations to regenerative crop systems illustrates how traditional farming wisdom integrates with cutting-edge carbon monitoring technology.\n\nThe initiative's shift from destructive practices to soil-building techniques creates quantifiable improvements in water retention, organic matter, and ecosystem resilience while supporting continued agricultural productivity. Advanced monitoring systems track carbon accumulation, biodiversity enhancement, and soil health metrics, establishing Pimlico Farm as a replicable model for regenerative agriculture transformation within traditional farming regions.",
+      "backgroundImage": "/project_images/06__PIM.png"
+    },
+    {
+      "id": "7",
+      "title": "Harvey Manning Park Expansion",
+      "subtitle": "Urban Forest Conservation",
+      "location": "Issaquah, Washington",
+      "area": "6.13 hectares",
+      "description": "Among the towering giants of the Issaquah Alps, century-old mixed conifer forests hold decades of carbon storage while providing essential stepping stones for wildlife moving between mountain peaks and lakeside habitats. This community-driven initiative demonstrates how strategic preservation creates measurable climate benefits while maintaining the diverse habitat layers essential for ecological connectivity.",
+      "benefits": [
+        "Carbon storage in century-old forest",
+        "Stormwater management",
+        "Salmon habitat protection",
+        "Wildlife corridor preservation",
+        "Urban canopy contribution"
+      ],
+      "moreDetails": "Harvey Manning Park Expansion encompasses a critical urban forest preservation strategy protecting century-old mixed conifer and deciduous forest within the celebrated Issaquah Alps mountain system. Developed through collaborative partnership between the City of Issaquah, King County, and Trust for Public Land, this initiative demonstrates how community-driven conservation can safeguard irreplaceable urban wilderness while maintaining vital habitat connectivity between Tiger, Squak, and Cougar Mountains.\n\nThe project addresses greenhouse gas emission mitigation through mature forest preservation, preventing carbon release while protecting salmon-bearing waterways that feed Lake Sammamish's pristine ecosystem.\n\nOperating under the Urban Forest Carbon Protocol, the initiative ensures critical connectivity between protected habitats while supporting diverse wildlife including pollinators across layered forest ecosystems. The preservation effort contributes to Issaquah's impressive 51% tree canopy coverage while maintaining essential riparian and wetland habitat that supports wildlife movement across the Mountains to Sound Greenway National Heritage Area corridor. Advanced monitoring systems track carbon storage preservation and ecosystem service enhancement, establishing this initiative as a replicable model for urban forest conservation within rapidly developing metropolitan regions.",
+      "backgroundImage": "/project_images/07__HAR.png"
+    },
+    {
+      "id": "8",
+      "title": "St. Elmo Preservation Project",
+      "subtitle": "Community Conservation",
+      "location": "Chattanooga, Tennessee",
+      "area": "58.14 hectares",
+      "description": "Across Lookout Mountain's ancient oak-pine forests, eastern box turtles and spotted salamanders navigate corridors that connect one of North America's most biodiverse ecoregions, while community-driven conservation transforms at-risk youth into environmental stewards. This grassroots initiative demonstrates how habitat protection and workforce development can flourish as unified practice while maintaining critical wildlife connectivity.",
+      "benefits": [
+        "Habitat corridor preservation",
+        "Wildlife protection for multiple species",
+        "Community recreation access",
+        "Youth conservation education"
+      ],
+      "moreDetails": "St. Elmo Preservation Project encompasses a transformative community-driven conservation strategy protecting oak-pine forest within one of North America's most biologically diverse yet critically imperiled ecoregions. Developed by Lookout Mountain Conservancy, this initiative demonstrates how urban forest preservation can bridge historic landscapes with contemporary community needs while safeguarding essential habitat corridors between Chickamauga & Chattanooga National Military Park and the historic St. Elmo neighborhood.\n\nThe project addresses greenhouse gas mitigation through mature oak-pine forest preservation while ensuring critical connectivity for diverse wildlife including eastern box turtles, red-tailed hawks, black bears, and spotted salamanders across the 90-mile Lookout Mountain ecoregion. Operating under the Urban Forest Carbon Protocol with conservation easement protection, the initiative integrates innovative youth engagement through partnership with The Howard School, creating employment and scholarship opportunities for at-risk teens while connecting urban youth to nature through hands-on ecological restoration.\n\nThe comprehensive approach demonstrates how grassroots environmental stewardship can evolve from trail planning to community conservation that directly supports educational programming through carbon credit revenue. Advanced monitoring systems track habitat connectivity and community engagement outcomes, establishing this initiative as a replicable model for youth-centered conservation within biodiverse urban-wildland interface regions.",
+      "backgroundImage": "/project_images/08__STE.png"
+    }
+  ]
+}

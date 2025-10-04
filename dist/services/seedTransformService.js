@@ -109,7 +109,7 @@ class SeedTransformService {
         const locationName = locationMapping ? locationMapping.locationName : contractData.location || 'Unknown Location';
         return {
             id: contractData.id.toString(),
-            label: `Seed #${contractData.id}`,
+            label: `Seed 00${contractData.id}`,
             name: `Digital Flower ${contractData.id}`,
             description: `A beautiful digital flower planted in ${locationName}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
             seedImageUrl: contractData.seedImageUrl || `/images/seeds/seed-${contractData.id}.png`,
@@ -186,7 +186,7 @@ class SeedTransformService {
             || contractData.location || 'Unknown';
         return {
             id: contractData.id.toString(),
-            label: `Seed #${contractData.id}`,
+            label: `Seed 00${contractData.id}`,
             name: `Digital Flower ${contractData.id}`,
             description: `A beautiful digital flower planted in ${locationName}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
             seedImageUrl: contractData.seedImageUrl || `/images/seeds/seed-${contractData.id}.png`,
@@ -293,7 +293,7 @@ class SeedTransformService {
         const ecosystemProjects = ecosystemProject ? [ecosystemProject] : [];
         return {
             id: contractData.id.toString(),
-            label: `Seed #${contractData.id}`,
+            label: `Seed 00${contractData.id}`,
             name: `Digital Flower ${contractData.id}`,
             description: `A beautiful digital flower planted in ${locationName}. This seed was created on ${createdDate.toLocaleDateString()} and represents growth and prosperity in our ecosystem.`,
             seedImageUrl: contractData.seedImageUrl || `/images/seeds/seed-${contractData.id}.png`,

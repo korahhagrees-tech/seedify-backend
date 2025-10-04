@@ -56,6 +56,18 @@ export interface BeneficiaryRef {
   claimableAmount?: string; // claimable amount in ETH
   isActive?: boolean; // whether beneficiary is active
   beneficiaryValue?: string; // total value for beneficiary
+  // Enriched project data from projects.json
+  projectData?: {
+    title: string;
+    subtitle: string;
+    location: string;
+    area: string;
+    description: string;
+    benefits: string[];
+    moreDetails: string;
+    backgroundImage: string;
+  };
+  slug?: string; // URL-friendly slug for routing (e.g., "grgich-hills-estate")
 }
 
 export interface Seed {
@@ -74,10 +86,9 @@ export interface Seed {
   metadata: SeedMetadata;
   // Additional data for components
   location: string; // Single location string from getSeedLocation(seedId)
-  ecosystemProjects?: EcosystemProject[]; // Optional: mapped from location
   wayOfFlowersData?: WayOfFlowersData; // Optional: NOT from contract, for frontend only
   story?: { title: string; author: string; story: string }; // Optional: NOT from contract
-  // Beneficiaries with full details from contract
+  // Beneficiaries with full details from contract + enriched project data
   beneficiaries?: BeneficiaryRef[];
 }
 
@@ -123,6 +134,11 @@ export interface ContractSeedData {
   seedImageUrl?: string;
   latestSnapshotUrl?: string;
   snapshotPrice?: string;
+  unlockTime?: number;
+  accumulatedProfits?: string;
+  dynamicPercentage?: string;
+  totalValue?: string;
+  isEarlyWithdrawn?: boolean;
 }
 
 export interface ContractSeedMetadata {
