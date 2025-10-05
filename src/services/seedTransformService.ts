@@ -35,7 +35,8 @@ export class SeedTransformService {
     const filename = backgroundImage.split('/').pop() || '';
     
     // Convert to lowercase and replace directory
-    const seedEmblemFilename = filename.toLowerCase();
+    // const seedEmblemFilename = filename.toLowerCase();
+    const seedEmblemFilename = filename;
     
     return `/seeds/${seedEmblemFilename}`;
   }
