@@ -31,7 +31,7 @@ class EcosystemMappingService {
                     firstText: 'Evolving through',
                     secondText: 'ecosystem nurturing...',
                     thirdText: 'Grown by community stewardship.',
-                    mainQuote: 'Evidence for the non-metaphorical memory of light residing in plant leaves...',
+                    mainQuote: 'Evidence for the non-metaphorical memory of light residing in plant leaves adds insult to the injury suffered by the argument of those who still insist on the exceptionalism of the central nervous system. In other words, when consciousness is wholly embedded in its biochemical substratum, it becomes increasingly indistinguishable from the cellular and molecular processes of other, presumably nonconscious organisms, such as plants.',
                     author: 'Michael Marder'
                 }
             },
@@ -52,7 +52,7 @@ class EcosystemMappingService {
                     firstText: 'Evolving through',
                     secondText: 'ecosystem nurturing...',
                     thirdText: 'Grown by community stewardship.',
-                    mainQuote: 'Evidence for the non-metaphorical memory of light residing in plant leaves...',
+                    mainQuote: 'Evidence for the non-metaphorical memory of light residing in plant leaves adds insult to the injury suffered by the argument of those who still insist on the exceptionalism of the central nervous system. In other words, when consciousness is wholly embedded in its biochemical substratum, it becomes increasingly indistinguishable from the cellular and molecular processes of other, presumably nonconscious organisms, such as plants.',
                     author: 'Michael Marder'
                 }
             },
@@ -73,8 +73,8 @@ class EcosystemMappingService {
                     firstText: 'Growing through',
                     secondText: 'urban transformation...',
                     thirdText: 'Cultivated by community wisdom.',
-                    mainQuote: 'The garden suggests there might be a place where we can meet nature halfway...',
-                    author: 'Michael Pollan'
+                    mainQuote: 'Evidence for the non-metaphorical memory of light residing in plant leaves adds insult to the injury suffered by the argument of those who still insist on the exceptionalism of the central nervous system. In other words, when consciousness is wholly embedded in its biochemical substratum, it becomes increasingly indistinguishable from the cellular and molecular processes of other, presumably nonconscious organisms, such as plants.',
+                    author: 'Michael Marder'
                 }
             },
             {
@@ -94,8 +94,8 @@ class EcosystemMappingService {
                     firstText: 'Flourishing through',
                     secondText: 'community connection...',
                     thirdText: 'Nurtured by shared purpose.',
-                    mainQuote: 'In every walk with nature, one receives far more than they seek...',
-                    author: 'John Muir'
+                    mainQuote: 'Evidence for the non-metaphorical memory of light residing in plant leaves adds insult to the injury suffered by the argument of those who still insist on the exceptionalism of the central nervous system. In other words, when consciousness is wholly embedded in its biochemical substratum, it becomes increasingly indistinguishable from the cellular and molecular processes of other, presumably nonconscious organisms, such as plants.',
+                    author: 'Michael Marder'
                 }
             },
             {
@@ -115,8 +115,8 @@ class EcosystemMappingService {
                     firstText: 'Innovating through',
                     secondText: 'smart cultivation...',
                     thirdText: 'Enhanced by technology and care.',
-                    mainQuote: 'The future of agriculture lies in the integration of technology with nature...',
-                    author: 'Unknown'
+                    mainQuote: 'Evidence for the non-metaphorical memory of light residing in plant leaves adds insult to the injury suffered by the argument of those who still insist on the exceptionalism of the central nervous system. In other words, when consciousness is wholly embedded in its biochemical substratum, it becomes increasingly indistinguishable from the cellular and molecular processes of other, presumably nonconscious organisms, such as plants.',
+                    author: 'Michael Marder'
                 }
             }
         ];
