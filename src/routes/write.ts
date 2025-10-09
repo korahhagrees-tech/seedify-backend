@@ -10,7 +10,7 @@ router.post('/seeds/:id/withdraw', writeController.withdrawFromSeed);
 router.post('/seeds/:id/claim-profits', writeController.claimSeedProfits);
 
 // Snapshot operations
-router.post('/snapshots/mint', writeController.mintSnapshot);
+router.get('/snapshots/mint/:seedId', writeController.prepareMintSnapshot);
 
 // Admin operations (require special permissions)
 router.post('/admin/beneficiaries', writeController.addBeneficiary);

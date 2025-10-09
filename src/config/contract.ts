@@ -13,6 +13,10 @@ export const contractConfig = {
   snapshotNFTAddress: process.env.SNAPSHOT_NFT_ADDRESS,
   distributorAddress: process.env.DISTRIBUTOR_ADDRESS,
   aavePoolAddress: process.env.AAVE_POOL_ADDRESS,
+  snapFactoryAddress: process.env.SNAPSHOT_FACTORY,
+  
+  // Royalty and Fee Configuration
+  royaltyRecipient: process.env.ROYALTY_RECIPIENT || '0xe39C834603f50FFd4eEbf35437a0770CA90a9ACd',
   
   // Network Configuration
   chainId: 8453, // Base Mainnet
@@ -25,7 +29,10 @@ export const contractConfig = {
   
   // API Configuration
   apiVersion: '1.0.0',
-  apiName: 'Seedify Backend API'
+  apiName: 'Seedify Backend API',
+  
+  // External Service Configuration
+  imageGenerationServiceUrl: process.env.IMAGE_GENERATION_SERVICE_URL || 'https://wof.up.railway.app'
 };
 
 export default contractConfig;

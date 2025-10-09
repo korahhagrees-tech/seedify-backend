@@ -13,6 +13,7 @@ import snapshotRoutes from './routes/snapshots';
 import adminRoutes from './routes/admin';
 import writeRoutes from './routes/write';
 import usersRoutes from './routes/users';
+import { writeController } from './controllers/writeController';
 
 // Create Express app
 const app = express();
@@ -43,6 +44,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/write', writeRoutes);
 app.use('/api/users', usersRoutes);
 
+// Webhook endpoint for snapshot minting
+app.post('/api/snapshot-minted', writeController.snapshotMinted);
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -57,7 +61,8 @@ app.get('/', (req, res) => {
       snapshots: '/api/snapshots',
       admin: '/api/admin',
       write: '/api/write',
-      users: '/api/users'
+      users: '/api/users',
+      snapshotMinted: '/api/snapshot-minted'
     }
   });
 });

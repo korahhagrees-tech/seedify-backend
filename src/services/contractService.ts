@@ -464,6 +464,13 @@ export class ContractService {
   }
 
   /**
+   * Get snap factory contract address for snapshot minting operations
+   */
+  getSnapFactoryContractAddress(): string {
+    return contractConfig.snapFactoryAddress || '';
+  }
+
+  /**
    * Get all seeds owned by a specific user
    */
   async getUserSeeds(userAddress: string): Promise<number[]> {
@@ -1351,6 +1358,38 @@ export class ContractService {
     } catch (error) {
       console.error(`Error fetching latest snapshot for seed ${seedId}:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Get next snapshot ID (global counter)
+   */
+  async getNextSnapshotId(): Promise<number> {
+    if (!this.snapshotNFTContract) {
+      return 0;
+    }
+
+    try {
+      const nextId = await this.retryWithBackoff(async () => {
+        return await this.snapshotNFTContract!.getNextSnapshotId();
+      });
+      return Number(nextId);
+    } catch (error) {
+      console.error('Error fetching next snapshot ID:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get current block number
+   */
+  async getCurrentBlockNumber(): Promise<number> {
+    try {
+      const blockNumber = await this.provider.getBlockNumber();
+      return blockNumber;
+    } catch (error) {
+      console.error('Error fetching current block number:', error);
+      return 0;
     }
   }
 }

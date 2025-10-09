@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { contractService } from '../services/contractService';
+import { contractConfig } from '../config/contract';
 
 export const writeController = {
   /**
@@ -199,44 +200,126 @@ export const writeController = {
   },
 
   /**
-   * Mint a snapshot
-   * POST /api/write/snapshots/mint
+   * Prepare mint snapshot transaction data
+   * GET /api/write/snapshots/mint/:seedId?beneficiaryIndex=0
    */
-  mintSnapshot: async (req: Request, res: Response): Promise<void> => {
+  prepareMintSnapshot: async (req: Request, res: Response): Promise<void> => {
     try {
-      const { seedId, beneficiaryIndex, processId, value, projectCode } = req.body;
-
-      if (!seedId || !beneficiaryIndex || !processId || !value) {
+      const seedId = Number(req.params.seedId);
+      const beneficiaryIndex = req.query.beneficiaryIndex ? Number(req.query.beneficiaryIndex) : undefined;
+      
+      if (!Number.isFinite(seedId) || seedId < 1) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields',
-          message: 'seedId, beneficiaryIndex, processId, and value are required',
+          error: 'Invalid seedId',
+          message: 'seedId must be a positive integer',
           timestamp: Date.now()
         });
         return;
       }
 
-      const valueInWei = Math.floor(parseFloat(value) * Math.pow(10, 18));
-      if (isNaN(valueInWei) || valueInWei <= 0) {
+      if (beneficiaryIndex !== undefined && (!Number.isFinite(beneficiaryIndex) || beneficiaryIndex < 0)) {
         res.status(400).json({
           success: false,
-          error: 'Invalid value',
-          message: 'value must be a positive number',
+          error: 'Invalid beneficiaryIndex',
+          message: 'beneficiaryIndex must be a non-negative integer',
           timestamp: Date.now()
         });
         return;
+      }
+
+      // Get seed data from contract to retrieve snapshot price
+      const seedData = await contractService.getSeedData(seedId);
+      
+      if (!seedData) {
+        res.status(404).json({
+          success: false,
+          error: 'Seed not found',
+          message: `Seed ${seedId} does not exist`,
+          timestamp: Date.now()
+        });
+        return;
+      }
+
+      // Get snapshot price from seed data (already in ETH format from contract service)
+      const snapshotPriceEth = seedData.snapshotPrice || '0';
+      const snapshotPriceWei = Math.floor(parseFloat(snapshotPriceEth) * Math.pow(10, 18));
+
+      // Get contract addresses
+      const snapFactoryAddress = contractService.getSnapFactoryContractAddress();
+      const royaltyRecipient = contractConfig.royaltyRecipient;
+
+      // Get seed owner (this will be used by frontend for comparison)
+      const seedOwner = seedData.owner;
+
+      // Generate unique processId on the backend
+      const processId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Get next snapshot ID from contract
+      const nextSnapshotId = await contractService.getNextSnapshotId();
+
+      // Get current block number
+      const currentBlockNumber = await contractService.getCurrentBlockNumber();
+
+      // Get all snapshots for this seed to calculate distribution
+      const seedSnapshots = await contractService.getSeedSnapshots(seedId);
+
+      // Prepare response data
+      const responseData: any = {
+        contractAddress: snapFactoryAddress,
+        functionName: 'mintSnapshot',
+        args: {
+          seedId: seedId,
+          royaltyRecipient: royaltyRecipient
+        },
+        value: snapshotPriceWei.toString(),
+        valueEth: snapshotPriceEth,
+        description: `Mint snapshot for seed ${seedId}`,
+        seedOwner: seedOwner,
+        processId: processId,
+        snapshotId: nextSnapshotId,
+        blockNumber: currentBlockNumber
+      };
+
+      // If beneficiaryIndex is provided, include beneficiary-specific data
+      if (beneficiaryIndex !== undefined) {
+        // Get beneficiary data
+        const beneficiaryData = await contractService.getBeneficiaryData(beneficiaryIndex);
+        
+        if (!beneficiaryData) {
+          res.status(404).json({
+            success: false,
+            error: 'Beneficiary not found',
+            message: `Beneficiary at index ${beneficiaryIndex} does not exist`,
+            timestamp: Date.now()
+          });
+          return;
+        }
+
+        // Calculate distribution percentage
+        // Get all snapshots data for this seed
+        const snapshotDataPromises = seedSnapshots.map(id => contractService.getSnapshotData(id));
+        const snapshotsData = await Promise.all(snapshotDataPromises);
+        
+        // Count how many belong to this beneficiary
+        const beneficiarySnapshotCount = snapshotsData.filter(
+          snapshot => snapshot && snapshot.beneficiaryIndex === beneficiaryIndex
+        ).length;
+
+        const totalSnapshots = seedSnapshots.length;
+        const distributionPercentage = totalSnapshots > 0 
+          ? Number((((beneficiarySnapshotCount + 1) / (totalSnapshots + 1)) * 100).toFixed(2))
+          : 100;
+
+        responseData.args.beneficiaryIndex = beneficiaryIndex;
+        responseData.beneficiaryCode = beneficiaryData.code;
+        responseData.beneficiaryDistribution = distributionPercentage;
       }
 
       res.json({
         success: true,
-        data: {
-          contractAddress: contractService.getSnapshotContractAddress(),
-          functionName: 'mintSnapshot',
-          args: [seedId, beneficiaryIndex, processId, '0x0000000000000000000000000000000000000000', valueInWei, projectCode || ''],
-          value: valueInWei.toString(),
-          description: `Mint snapshot for seed ${seedId} with beneficiary ${beneficiaryIndex}`
-        },
-        message: 'Transaction data prepared. Frontend should execute the transaction.',
+        data: responseData,
+        message: 'Transaction data prepared. Frontend should execute the transaction with these exact values.',
         timestamp: Date.now()
       });
     } catch (error) {
@@ -244,6 +327,106 @@ export const writeController = {
       res.status(500).json({
         success: false,
         error: 'Failed to prepare mint snapshot transaction',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now()
+      });
+    }
+  },
+
+  /**
+   * Handle snapshot minted webhook (triggers image generation)
+   * POST /api/snapshot-minted
+   */
+  snapshotMinted: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { 
+        contractAddress, 
+        seedId, 
+        snapshotId, 
+        beneficiaryCode, 
+        beneficiaryDistribution, 
+        creator, 
+        txHash, 
+        timestamp, 
+        blockNumber, 
+        processId 
+      } = req.body;
+
+      // Validate required fields
+      if (!contractAddress || !seedId || !snapshotId || !beneficiaryCode || 
+          beneficiaryDistribution === undefined || !creator || !txHash || 
+          !timestamp || !blockNumber || !processId) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields',
+          message: 'All fields are required: contractAddress, seedId, snapshotId, beneficiaryCode, beneficiaryDistribution, creator, txHash, timestamp, blockNumber, processId',
+          timestamp: Date.now()
+        });
+        return;
+      }
+
+      // Forward the request to the external image generation service
+      const imageServiceUrl = `${contractConfig.imageGenerationServiceUrl}/api/snapshot-minted`;
+      
+      console.log('Forwarding snapshot-minted webhook to image generation service:', imageServiceUrl);
+      console.log('Payload:', {
+        contractAddress,
+        seedId,
+        snapshotId,
+        beneficiaryCode,
+        beneficiaryDistribution,
+        creator,
+        txHash,
+        timestamp,
+        blockNumber,
+        processId
+      });
+
+      const response = await fetch(imageServiceUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contractAddress,
+          seedId: Number(seedId),
+          snapshotId: Number(snapshotId),
+          beneficiaryCode,
+          beneficiaryDistribution: Number(beneficiaryDistribution),
+          creator,
+          txHash,
+          timestamp: Number(timestamp),
+          blockNumber: Number(blockNumber),
+          processId
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Image generation service error:', errorText);
+        res.status(response.status).json({
+          success: false,
+          error: 'Image generation service error',
+          message: errorText,
+          timestamp: Date.now()
+        });
+        return;
+      }
+
+      const result = await response.json();
+      console.log('Image generation service response:', result);
+
+      res.json({
+        success: true,
+        message: 'Snapshot minted webhook processed successfully',
+        data: result,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error processing snapshot-minted webhook:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process snapshot-minted webhook',
         message: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now()
       });
