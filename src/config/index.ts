@@ -3,7 +3,7 @@ export const config = {
     port: parseInt(process.env.PORT || '3001', 10),
     environment: process.env.NODE_ENV || 'development',
     bodyLimit: process.env.BODY_LIMIT || '10mb',
-    host: process.env.HOST || 'localhost'
+    host: process.env.HOST || 'https://seedify-neon.vercel.app/'
   },
   cors: {
     origin: [
