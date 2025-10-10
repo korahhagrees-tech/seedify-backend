@@ -7,6 +7,7 @@ export const config = {
   },
   cors: {
     origin: [
+      'https://seedify-neon.vercel.app/',
       'http://localhost:3000', // Frontend
       'http://localhost:3001', // Backend itself
       process.env.FRONTEND_URL || 'http://localhost:3000'
