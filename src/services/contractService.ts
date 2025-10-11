@@ -1015,6 +1015,10 @@ export class ContractService {
 
   /**
    * Get beneficiary data from distributor contract
+   * Hardcoded mappings for specific seeds:
+   * - Seed 1: Walkers Reserve, El Globo, Jaguar, Pimlico
+   * - Seed 2: Grgich Hills, Buena Vista, Jaguar, Pimlico
+   * - Others: Default first 4 beneficiaries
    */
   async getSeedBeneficiaries(seedId: number): Promise<{ code: string; index?: number; name?: string }[]> {
     // If distributor not configured, return empty
@@ -1026,7 +1030,7 @@ export class ContractService {
     try {
       console.log(`Fetching beneficiaries for seed ${seedId}...`);
       
-      // Get all beneficiaries and return first 4 (as per your requirement)
+      // Get all beneficiaries
       const allBeneficiaries = await this.getAllBeneficiaries();
       
       if (allBeneficiaries.length === 0) {
@@ -1034,19 +1038,32 @@ export class ContractService {
         return [];
       }
 
-      // Return first 4 beneficiaries for this seed with full details
-      const seedBeneficiaries = allBeneficiaries.slice(0, 4).map((b) => ({
-        code: b.code,
-        index: b.index,
-        name: b.name,
-        percentage: b.percentage,
-        address: b.address,
-        allocatedAmount: b.allocatedAmount,
-        totalClaimed: b.totalClaimed,
-        claimableAmount: b.claimableAmount,
-        isActive: b.isActive,
-        beneficiaryValue: b.beneficiaryValue
-      }));
+      // Hardcoded beneficiary mappings for specific seeds
+      const seedBeneficiaryMappings: { [key: number]: number[] } = {
+        1: [4, 1, 2, 5], // Seed 1: Walkers Reserve, El Globo, Jaguar, Pimlico
+        2: [0, 3, 2, 5], // Seed 2: Grgich Hills, Buena Vista, Jaguar, Pimlico
+        // Add more seed mappings here as needed
+      };
+
+      // Get beneficiary indices for this seed (default to first 4)
+      const beneficiaryIndices = seedBeneficiaryMappings[seedId] || [0, 1, 2, 3];
+
+      // Map indices to actual beneficiaries
+      const seedBeneficiaries = beneficiaryIndices
+        .map(index => allBeneficiaries[index])
+        .filter(b => b) // Filter out any undefined (in case index doesn't exist)
+        .map((b) => ({
+          code: b.code,
+          index: b.index,
+          name: b.name,
+          percentage: b.percentage,
+          address: b.address,
+          allocatedAmount: b.allocatedAmount,
+          totalClaimed: b.totalClaimed,
+          claimableAmount: b.claimableAmount,
+          isActive: b.isActive,
+          beneficiaryValue: b.beneficiaryValue
+        }));
 
       console.log(`Found ${seedBeneficiaries.length} beneficiaries for seed ${seedId}:`, seedBeneficiaries);
       return seedBeneficiaries;
