@@ -7,7 +7,7 @@ export const config = {
   },
   cors: {
     origin: [
-      'https://seedify-neon.vercel.app',  // ✅ No trailing slash
+      'https://seedify-neon.vercel.app', 'https://way-of-flower.vercel.app',
       'http://localhost:3000',
       'http://localhost:3001',
       process.env.FRONTEND_URL || 'http://localhost:3000'
