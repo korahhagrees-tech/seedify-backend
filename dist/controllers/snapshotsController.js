@@ -15,10 +15,13 @@ exports.snapshotsController = {
             for (const snapshotId of snapshotIds) {
                 const data = await contractService_1.contractService.getSnapshotData(snapshotId);
                 if (data) {
+                    // Fetch real image URL from contract
+                    const imageUrl = await contractService_1.contractService.getSnapshotImageUrl(snapshotId);
                     snapshots.push({
                         id: snapshotId,
                         ...data,
-                        valueEth: (data.value / Math.pow(10, 18)).toFixed(6)
+                        valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
+                        imageUrl: imageUrl || undefined
                     });
                 }
             }
@@ -40,12 +43,15 @@ exports.snapshotsController = {
                 res.status(404).json({ success: false, error: 'Snapshot not found', timestamp: Date.now() });
                 return;
             }
+            // Fetch real image URL from contract
+            const imageUrl = await contractService_1.contractService.getSnapshotImageUrl(snapshotId);
             res.json({
                 success: true,
                 snapshot: {
                     id: snapshotId,
                     ...data,
-                    valueEth: (data.value / Math.pow(10, 18)).toFixed(6)
+                    valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
+                    imageUrl: imageUrl || undefined
                 },
                 timestamp: Date.now()
             });
@@ -66,10 +72,13 @@ exports.snapshotsController = {
             for (const snapshotId of snapshotIds) {
                 const data = await contractService_1.contractService.getSnapshotData(snapshotId);
                 if (data) {
+                    // Fetch real image URL from contract
+                    const imageUrl = await contractService_1.contractService.getSnapshotImageUrl(snapshotId);
                     snapshots.push({
                         id: snapshotId,
                         ...data,
-                        valueEth: (data.value / Math.pow(10, 18)).toFixed(6)
+                        valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
+                        imageUrl: imageUrl || undefined
                     });
                 }
             }

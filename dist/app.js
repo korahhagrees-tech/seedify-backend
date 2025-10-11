@@ -17,6 +17,8 @@ const beneficiaries_1 = __importDefault(require("./routes/beneficiaries"));
 const snapshots_1 = __importDefault(require("./routes/snapshots"));
 const admin_1 = __importDefault(require("./routes/admin"));
 const write_1 = __importDefault(require("./routes/write"));
+const users_1 = __importDefault(require("./routes/users"));
+const writeController_1 = require("./controllers/writeController");
 // Create Express app
 const app = (0, express_1.default)();
 // Security middleware
@@ -38,6 +40,9 @@ app.use('/api/beneficiaries', beneficiaries_1.default);
 app.use('/api/snapshots', snapshots_1.default);
 app.use('/api/admin', admin_1.default);
 app.use('/api/write', write_1.default);
+app.use('/api/users', users_1.default);
+// Webhook endpoint for snapshot minting
+app.post('/api/snapshot-minted', writeController_1.writeController.snapshotMinted);
 // Root endpoint
 app.get('/', (req, res) => {
     res.json({
@@ -51,7 +56,9 @@ app.get('/', (req, res) => {
             beneficiaries: '/api/beneficiaries',
             snapshots: '/api/snapshots',
             admin: '/api/admin',
-            write: '/api/write'
+            write: '/api/write',
+            users: '/api/users',
+            snapshotMinted: '/api/snapshot-minted'
         }
     });
 });

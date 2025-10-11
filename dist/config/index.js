@@ -6,12 +6,13 @@ exports.config = {
         port: parseInt(process.env.PORT || '3001', 10),
         environment: process.env.NODE_ENV || 'development',
         bodyLimit: process.env.BODY_LIMIT || '10mb',
-        host: process.env.HOST || 'localhost'
+        host: process.env.HOST || '0.0.0.0'
     },
     cors: {
         origin: [
-            'http://localhost:3000', // Frontend
-            'http://localhost:3001', // Backend itself
+            'https://seedify-neon.vercel.app', 'https://way-of-flower.vercel.app',
+            'http://localhost:3000',
+            'http://localhost:3001',
             process.env.FRONTEND_URL || 'http://localhost:3000'
         ].filter(Boolean),
         credentials: true,

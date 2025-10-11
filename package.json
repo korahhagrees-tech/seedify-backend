@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').cpSync('src/abi', 'dist/abi', {recursive:true})\" && node -e \"require('fs').cpSync('src/constants', 'dist/constants', {recursive:true})\"",
     "start": "node dist/server.js",
     "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node src/server.ts",
     "lint": "eslint 'src/**/*.ts'"

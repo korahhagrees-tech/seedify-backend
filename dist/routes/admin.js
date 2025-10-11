@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const adminController_1 = require("../controllers/adminController");
 const router = (0, express_1.Router)();
+// Statistics
+router.get('/stats', adminController_1.adminController.getStats);
 // Beneficiaries management
 router.post('/beneficiaries', adminController_1.adminController.addBeneficiary);
 router.post('/beneficiaries/:index/deactivate', adminController_1.adminController.deactivateBeneficiary);

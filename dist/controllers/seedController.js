@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.seedController = void 0;
 const contractService_1 = require("../services/contractService");
-const mockDataService_1 = require("../services/mockDataService");
 const seedTransformService_1 = require("../services/seedTransformService");
 const contract_1 = require("../config/contract");
 exports.seedController = {
@@ -12,26 +11,21 @@ exports.seedController = {
      */
     getAllSeeds: async (req, res) => {
         try {
-            const useMockData = contract_1.contractConfig.useMockData;
-            let seeds;
-            if (useMockData) {
-                // Use mock data for development
-                console.log('Using mock data for seeds');
-                seeds = mockDataService_1.mockDataService.getAllSeedsSummaries();
+            // Always use contract data - NO MOCK DATA
+            console.log('Fetching seeds from contract');
+            const contractData = await contractService_1.contractService.getAllSeedsData();
+            if (contractData.length === 0) {
+                // Return empty array if no seeds found - NO FALLBACK TO MOCK
+                console.log('No seeds found in contract');
+                const response = {
+                    success: true,
+                    seeds: [],
+                    timestamp: Date.now()
+                };
+                res.json(response);
+                return;
             }
-            else {
-                // Use real contract data
-                console.log('Fetching seeds from contract');
-                const contractData = await contractService_1.contractService.getAllSeedsData();
-                if (contractData.length === 0) {
-                    // Fallback to mock data if no contract data
-                    console.log('No contract data found, falling back to mock data');
-                    seeds = mockDataService_1.mockDataService.getAllSeedsSummaries();
-                }
-                else {
-                    seeds = seedTransformService_1.seedTransformService.transformContractDataToSeedSummaries(contractData);
-                }
-            }
+            const seeds = seedTransformService_1.seedTransformService.transformContractDataToSeedSummaries(contractData);
             const response = {
                 success: true,
                 seeds,
@@ -66,34 +60,19 @@ exports.seedController = {
                 });
                 return;
             }
-            const useMockData = contract_1.contractConfig.useMockData;
-            let seed;
-            if (useMockData) {
-                // Use mock data for development
-                console.log(`Using mock data for seed ${seedId}`);
-                seed = mockDataService_1.mockDataService.getSeedById(id);
-                if (!seed) {
-                    // Create a mock seed if it doesn't exist
-                    seed = seedTransformService_1.seedTransformService.createMockSeed(seedId);
-                }
+            // Always use contract data - NO MOCK DATA
+            console.log(`Fetching seed ${seedId} from contract`);
+            const contractData = await contractService_1.contractService.getSeedData(seedId);
+            if (!contractData || !contractData.exists) {
+                res.status(404).json({
+                    success: false,
+                    error: 'Seed not found',
+                    message: `Seed with ID ${seedId} does not exist`,
+                    timestamp: Date.now()
+                });
+                return;
             }
-            else {
-                // Use real contract data
-                console.log(`Fetching seed ${seedId} from contract`);
-                const contractData = await contractService_1.contractService.getSeedData(seedId);
-                if (!contractData) {
-                    // Fallback to mock data if contract data not found
-                    console.log(`Seed ${seedId} not found in contract, falling back to mock data`);
-                    seed = mockDataService_1.mockDataService.getSeedById(id);
-                    if (!seed) {
-                        // Create a mock seed if it doesn't exist
-                        seed = seedTransformService_1.seedTransformService.createMockSeed(seedId);
-                    }
-                }
-                else {
-                    seed = await seedTransformService_1.seedTransformService.transformContractDataToSeed(contractData);
-                }
-            }
+            const seed = await seedTransformService_1.seedTransformService.transformContractDataToSeed(contractData);
             const response = {
                 success: true,
                 seed,
@@ -117,26 +96,8 @@ exports.seedController = {
      */
     getSeedsCount: async (req, res) => {
         try {
-            const useMockData = contract_1.contractConfig.useMockData;
-            let count;
-            if (useMockData) {
-                count = mockDataService_1.mockDataService.getSeedsCount();
-            }
-            else {
-                try {
-                    count = await contractService_1.contractService.getTotalSeeds();
-                    if (count === 0) {
-                        // Fallback to mock data count if no contract data
-                        console.log('No seeds found in contract, falling back to mock data count');
-                        count = mockDataService_1.mockDataService.getSeedsCount();
-                    }
-                }
-                catch (error) {
-                    console.error('Error fetching seeds count from contract:', error);
-                    console.log('Falling back to mock data count');
-                    count = mockDataService_1.mockDataService.getSeedsCount();
-                }
-            }
+            // Always use contract data - NO MOCK DATA
+            const count = await contractService_1.contractService.getTotalSeeds();
             res.json({
                 success: true,
                 count,
@@ -169,7 +130,7 @@ exports.seedController = {
                         SEED_FACTORY_ADDRESS: process.env.SEED_FACTORY_ADDRESS,
                         RPC_URL: process.env.RPC_URL
                     },
-                    contractAddress: useMockData ? null : contractService_1.contractService.getContractAddress(),
+                    contractAddress: contractService_1.contractService.getContractAddress(),
                     provider: 'Base Mainnet'
                 },
                 timestamp: Date.now()

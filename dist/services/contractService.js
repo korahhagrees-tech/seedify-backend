@@ -292,7 +292,7 @@ class ContractService {
                     console.log(`Could not fetch snapshot price for seed ${seedId}:`, error);
                 }
             }
-            return {
+            const seedData = {
                 id: seedId,
                 owner: seedInfo.owner,
                 location: location,
@@ -302,10 +302,56 @@ class ContractService {
                 depositAmount: seedInfo.depositAmount,
                 withdrawn: seedInfo.withdrawn,
                 snapshotCount: Number(seedInfo.snapshotCount),
-                seedImageUrl: undefined, // Will be set by transform service if needed
-                latestSnapshotUrl: undefined, // Will be set by transform service if needed
+                seedImageUrl: undefined, // Will be fetched below
+                latestSnapshotUrl: undefined, // Will be fetched below
                 snapshotPrice: snapshotPrice
             };
+            // Fetch real image URLs from contract tokenURI
+            try {
+                const seedImageUrl = await this.getSeedImageUrl(seedId);
+                console.log(`Fetched seed image URL for seed ${seedId}:`, seedImageUrl);
+                if (seedImageUrl) {
+                    seedData.seedImageUrl = seedImageUrl;
+                }
+            }
+            catch (error) {
+                console.error(`Error fetching seed image URL for seed ${seedId}:`, error);
+            }
+            // Fetch latest snapshot image URL if seed has snapshots
+            if (Number(seedInfo.snapshotCount) > 0) {
+                try {
+                    const latestSnapshotUrl = await this.getLatestSnapshotImageUrl(seedId);
+                    console.log(`Fetched latest snapshot URL for seed ${seedId}:`, latestSnapshotUrl);
+                    if (latestSnapshotUrl) {
+                        seedData.latestSnapshotUrl = latestSnapshotUrl;
+                    }
+                }
+                catch (error) {
+                    console.error(`Error fetching latest snapshot image for seed ${seedId}:`, error);
+                }
+            }
+            // Fetch additional seed data (unlock time, profits, dynamic percentage)
+            try {
+                const [unlockTime, profits, dynamicPercentage, totalValue, isEarlyWithdrawn] = await Promise.all([
+                    this.getSeedUnlockTime(seedId),
+                    this.getSeedAccumulatedProfits(seedId),
+                    this.getDynamicSeedPercentage(seedId),
+                    this.getTotalSeedValue(seedId),
+                    this.isSeedEarlyWithdrawn(seedId)
+                ]);
+                return {
+                    ...seedData,
+                    unlockTime: unlockTime || undefined,
+                    accumulatedProfits: profits || undefined,
+                    dynamicPercentage: dynamicPercentage || undefined,
+                    totalValue: totalValue || undefined,
+                    isEarlyWithdrawn: isEarlyWithdrawn
+                };
+            }
+            catch (error) {
+                console.error(`Error fetching extended seed data for seed ${seedId}:`, error);
+                return seedData;
+            }
         }
         catch (error) {
             console.error(`Error processing seed ${seedId}:`, error);
@@ -358,7 +404,487 @@ class ContractService {
         return contract_1.contractConfig.distributorAddress || '';
     }
     /**
+     * Get snap factory contract address for snapshot minting operations
+     */
+    getSnapFactoryContractAddress() {
+        return contract_1.contractConfig.snapFactoryAddress || '';
+    }
+    /**
+     * Get all seeds owned by a specific user
+     */
+    async getUserSeeds(userAddress) {
+        if (!this.seedNFTContract) {
+            return [];
+        }
+        try {
+            const seedIds = await this.retryWithBackoff(async () => {
+                return await this.seedNFTContract.getSeedsByOwner(userAddress);
+            });
+            return seedIds.map((id) => Number(id));
+        }
+        catch (error) {
+            console.error(`Error fetching seeds for user ${userAddress}:`, error);
+            return [];
+        }
+    }
+    /**
+     * Get count of seeds owned by a user
+     */
+    async getUserSeedsCount(userAddress) {
+        if (!this.seedNFTContract) {
+            return 0;
+        }
+        try {
+            const balance = await this.retryWithBackoff(async () => {
+                return await this.seedNFTContract.balanceOf(userAddress);
+            });
+            return Number(balance);
+        }
+        catch (error) {
+            console.error(`Error fetching seed count for user ${userAddress}:`, error);
+            return 0;
+        }
+    }
+    /**
+     * Get snapshot IDs created by a user
+     */
+    async getUserSnapshotIds(userAddress) {
+        if (!this.snapshotNFTContract) {
+            return [];
+        }
+        try {
+            const snapshotIds = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.getUserSnapshots(userAddress);
+            });
+            return snapshotIds.map((id) => Number(id));
+        }
+        catch (error) {
+            console.error(`Error fetching snapshots for user ${userAddress}:`, error);
+            return [];
+        }
+    }
+    /**
+     * Get detailed snapshot data for a user
+     */
+    async getUserSnapshotData(userAddress) {
+        if (!this.snapshotNFTContract) {
+            return [];
+        }
+        try {
+            const snapshotData = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.getUserSnapshotData(userAddress);
+            });
+            return snapshotData.map((snapshot) => ({
+                creator: snapshot.creator,
+                value: Number(snapshot.value),
+                valueEth: (Number(snapshot.value) / Math.pow(10, 18)).toFixed(6),
+                beneficiaryIndex: Number(snapshot.beneficiaryIndex),
+                seedId: Number(snapshot.seedId),
+                timestamp: Number(snapshot.timestamp),
+                blockNumber: Number(snapshot.blockNumber),
+                positionInSeed: Number(snapshot.positionInSeed),
+                processId: snapshot.processId
+            }));
+        }
+        catch (error) {
+            console.error(`Error fetching snapshot data for user ${userAddress}:`, error);
+            return [];
+        }
+    }
+    /**
+     * Get user's balance in Aave pool
+     */
+    async getUserPoolBalance(userAddress) {
+        if (!contract_1.contractConfig.aavePoolAddress) {
+            return '0';
+        }
+        try {
+            const AavePoolABI = require('../abi/aavepool-abi.json');
+            const aavePoolContract = new ethers_1.ethers.Contract(contract_1.contractConfig.aavePoolAddress, AavePoolABI, this.provider);
+            const balance = await this.retryWithBackoff(async () => {
+                return await aavePoolContract.getBalance(userAddress);
+            });
+            return balance.toString();
+        }
+        catch (error) {
+            console.error(`Error fetching pool balance for user ${userAddress}:`, error);
+            return '0';
+        }
+    }
+    /**
+     * Get user's Seed NFT balance
+     */
+    async getUserSeedNFTBalance(userAddress) {
+        if (!this.seedNFTContract) {
+            return '0';
+        }
+        try {
+            const balance = await this.retryWithBackoff(async () => {
+                return await this.seedNFTContract.balanceOf(userAddress);
+            });
+            return balance.toString();
+        }
+        catch (error) {
+            console.error(`Error fetching seed NFT balance for user ${userAddress}:`, error);
+            return '0';
+        }
+    }
+    /**
+     * Get user's Snapshot NFT balance
+     */
+    async getUserSnapshotNFTBalance(userAddress) {
+        if (!this.snapshotNFTContract) {
+            return '0';
+        }
+        try {
+            const balance = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.balanceOf(userAddress);
+            });
+            return balance.toString();
+        }
+        catch (error) {
+            console.error(`Error fetching snapshot NFT balance for user ${userAddress}:`, error);
+            return '0';
+        }
+    }
+    /**
+     * Parse base64-encoded tokenURI data from contract
+     * Format: data:application/json;base64,<base64-encoded-json>
+     */
+    parseTokenURI(tokenURI) {
+        try {
+            // Check if it's a base64 data URI
+            if (!tokenURI.startsWith('data:application/json;base64,')) {
+                console.warn('TokenURI is not a base64 data URI:', tokenURI);
+                return null;
+            }
+            // Extract the base64 part
+            const base64Data = tokenURI.replace('data:application/json;base64,', '');
+            // Decode base64
+            const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
+            // Parse JSON
+            const metadata = JSON.parse(jsonString);
+            // Clean up image URL - remove HTML encoding artifacts like <> tags
+            let imageUrl = metadata.image || '';
+            if (imageUrl) {
+                // Remove ALL < and > characters from the URL (they appear in various positions)
+                // Examples:
+                // <https://...> -> https://...
+                // https://.../\u003Eseed1/... -> https://.../seed1/...
+                // https://...\u003C...> -> https://...
+                imageUrl = imageUrl.replace(/<|>/g, '');
+            }
+            return {
+                name: metadata.name || '',
+                description: metadata.description || '',
+                image: imageUrl,
+                attributes: metadata.attributes || []
+            };
+        }
+        catch (error) {
+            console.error('Error parsing tokenURI:', error);
+            return null;
+        }
+    }
+    /**
+     * Get seed image URL from tokenURI
+     */
+    async getSeedImageUrl(seedId) {
+        if (!this.seedNFTContract) {
+            return null;
+        }
+        try {
+            const tokenURI = await this.retryWithBackoff(async () => {
+                return await this.seedNFTContract.tokenURI(seedId);
+            });
+            const metadata = this.parseTokenURI(tokenURI);
+            return metadata?.image || null;
+        }
+        catch (error) {
+            console.error(`Error fetching seed image URL for seed ${seedId}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get seed metadata from tokenURI (includes image, name, description, attributes)
+     */
+    async getSeedTokenMetadata(seedId) {
+        if (!this.seedNFTContract) {
+            return null;
+        }
+        try {
+            const tokenURI = await this.retryWithBackoff(async () => {
+                return await this.seedNFTContract.tokenURI(seedId);
+            });
+            return this.parseTokenURI(tokenURI);
+        }
+        catch (error) {
+            console.error(`Error fetching seed metadata for seed ${seedId}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get latest snapshot image URL for a seed from SnapshotNFT.seedURI()
+     */
+    async getLatestSnapshotImageUrl(seedId) {
+        if (!this.snapshotNFTContract) {
+            return null;
+        }
+        try {
+            const seedURI = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.seedURI(seedId);
+            });
+            const metadata = this.parseTokenURI(seedURI);
+            return metadata?.image || null;
+        }
+        catch (error) {
+            console.error(`Error fetching latest snapshot image for seed ${seedId}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get snapshot image URL from tokenURI
+     */
+    async getSnapshotImageUrl(snapshotId) {
+        if (!this.snapshotNFTContract) {
+            return null;
+        }
+        try {
+            const tokenURI = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.tokenURI(snapshotId);
+            });
+            const metadata = this.parseTokenURI(tokenURI);
+            return metadata?.image || null;
+        }
+        catch (error) {
+            console.error(`Error fetching snapshot image URL for snapshot ${snapshotId}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get snapshot metadata from tokenURI (includes image, name, description, attributes)
+     */
+    async getSnapshotTokenMetadata(snapshotId) {
+        if (!this.snapshotNFTContract) {
+            return null;
+        }
+        try {
+            const tokenURI = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.tokenURI(snapshotId);
+            });
+            return this.parseTokenURI(tokenURI);
+        }
+        catch (error) {
+            console.error(`Error fetching snapshot metadata for snapshot ${snapshotId}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get distributor contract financial state
+     */
+    async getDistributorContractState() {
+        if (!this.distributorContract) {
+            return null;
+        }
+        try {
+            const state = await this.retryWithBackoff(async () => {
+                return await this.distributorContract.getContractState();
+            });
+            return {
+                contractBalance: ethers_1.ethers.formatEther(state.contractBalance),
+                totalAllocated: ethers_1.ethers.formatEther(state.totalAllocated),
+                totalClaimedAll: ethers_1.ethers.formatEther(state.totalClaimedAll),
+                remainingToDistribute: ethers_1.ethers.formatEther(state.remainingToDistribute)
+            };
+        }
+        catch (error) {
+            console.error('Error fetching distributor contract state:', error);
+            return null;
+        }
+    }
+    /**
+     * Get Aave pool information
+     */
+    async getPoolInfo() {
+        if (!contract_1.contractConfig.aavePoolAddress) {
+            return null;
+        }
+        try {
+            const AavePoolABI = require('../abi/aavepool-abi.json');
+            const aavePoolContract = new ethers_1.ethers.Contract(contract_1.contractConfig.aavePoolAddress, AavePoolABI, this.provider);
+            const poolInfo = await this.retryWithBackoff(async () => {
+                return await aavePoolContract.getPoolInfo();
+            });
+            return {
+                totalOriginal: ethers_1.ethers.formatEther(poolInfo.totalOriginal),
+                currentAToken: ethers_1.ethers.formatEther(poolInfo.currentAToken),
+                claimableInterest: ethers_1.ethers.formatEther(poolInfo.claimableInterest),
+                contractETH: ethers_1.ethers.formatEther(poolInfo.contractETH)
+            };
+        }
+        catch (error) {
+            console.error('Error fetching pool info:', error);
+            return null;
+        }
+    }
+    /**
+     * Get unlock time for a seed (when deposit can be withdrawn)
+     */
+    async getSeedUnlockTime(seedId) {
+        if (!this.seedFactoryContract) {
+            return null;
+        }
+        try {
+            const unlockTime = await this.retryWithBackoff(async () => {
+                return await this.seedFactoryContract.getUnlockTime(seedId);
+            });
+            return Number(unlockTime);
+        }
+        catch (error) {
+            console.error(`Error fetching unlock time for seed ${seedId}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get accumulated profits for a seed
+     */
+    async getSeedAccumulatedProfits(seedId) {
+        if (!this.seedFactoryContract) {
+            return null;
+        }
+        try {
+            const profits = await this.retryWithBackoff(async () => {
+                return await this.seedFactoryContract.getAccumulatedProfits(seedId);
+            });
+            return ethers_1.ethers.formatEther(profits);
+        }
+        catch (error) {
+            console.error(`Error fetching accumulated profits for seed ${seedId}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get dynamic seed percentage (changes over time)
+     */
+    async getDynamicSeedPercentage(seedId) {
+        if (!this.seedFactoryContract) {
+            return null;
+        }
+        try {
+            const percentage = await this.retryWithBackoff(async () => {
+                return await this.seedFactoryContract.getDynamicSeedPercentage(seedId);
+            });
+            // Convert basis points to percentage (10000 = 100%)
+            return (Number(percentage) / 100).toFixed(2);
+        }
+        catch (error) {
+            console.error(`Error fetching dynamic percentage for seed ${seedId}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get total seed value
+     */
+    async getTotalSeedValue(seedId) {
+        if (!this.seedFactoryContract) {
+            return null;
+        }
+        try {
+            const value = await this.retryWithBackoff(async () => {
+                if (seedId !== undefined) {
+                    return await this.seedFactoryContract['getTotalSeedValue(uint256)'](seedId);
+                }
+                else {
+                    return await this.seedFactoryContract['getTotalSeedValue()']();
+                }
+            });
+            return ethers_1.ethers.formatEther(value);
+        }
+        catch (error) {
+            console.error(`Error fetching total seed value:`, error);
+            return null;
+        }
+    }
+    /**
+     * Check if seed was early withdrawn
+     */
+    async isSeedEarlyWithdrawn(seedId) {
+        if (!this.seedFactoryContract) {
+            return false;
+        }
+        try {
+            const isEarlyWithdrawn = await this.retryWithBackoff(async () => {
+                return await this.seedFactoryContract.isSeedEarlyWithdrawn(seedId);
+            });
+            return Boolean(isEarlyWithdrawn);
+        }
+        catch (error) {
+            console.error(`Error checking early withdrawal for seed ${seedId}:`, error);
+            return false;
+        }
+    }
+    /**
+     * Get beneficiary total value from SnapshotNFT
+     */
+    async getBeneficiaryTotalValue(beneficiaryIndex) {
+        if (!this.snapshotNFTContract) {
+            return null;
+        }
+        try {
+            const value = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.getBeneficiaryTotalValue(beneficiaryIndex);
+            });
+            return ethers_1.ethers.formatEther(value);
+        }
+        catch (error) {
+            console.error(`Error fetching total value for beneficiary ${beneficiaryIndex}:`, error);
+            return null;
+        }
+    }
+    /**
+     * Get beneficiary snapshot count
+     */
+    async getBeneficiarySnapshotCount(beneficiaryIndex) {
+        if (!this.snapshotNFTContract) {
+            return 0;
+        }
+        try {
+            const count = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.getBeneficiarySnapshotCount(beneficiaryIndex);
+            });
+            return Number(count);
+        }
+        catch (error) {
+            console.error(`Error fetching snapshot count for beneficiary ${beneficiaryIndex}:`, error);
+            return 0;
+        }
+    }
+    /**
+     * Get claimable interest from Aave pool
+     */
+    async getClaimableInterest() {
+        if (!contract_1.contractConfig.aavePoolAddress) {
+            return null;
+        }
+        try {
+            const AavePoolABI = require('../abi/aavepool-abi.json');
+            const aavePoolContract = new ethers_1.ethers.Contract(contract_1.contractConfig.aavePoolAddress, AavePoolABI, this.provider);
+            const interest = await this.retryWithBackoff(async () => {
+                return await aavePoolContract.getClaimableInterest();
+            });
+            return ethers_1.ethers.formatEther(interest);
+        }
+        catch (error) {
+            console.error('Error fetching claimable interest:', error);
+            return null;
+        }
+    }
+    /**
      * Get beneficiary data from distributor contract
+     * Hardcoded mappings for specific seeds:
+     * - Seed 1: Walkers Reserve, El Globo, Jaguar, Pimlico
+     * - Seed 2: Grgich Hills, Buena Vista, Jaguar, Pimlico
+     * - Others: Default first 4 beneficiaries
      */
     async getSeedBeneficiaries(seedId) {
         // If distributor not configured, return empty
@@ -368,14 +894,25 @@ class ContractService {
         }
         try {
             console.log(`Fetching beneficiaries for seed ${seedId}...`);
-            // Get all beneficiaries and return first 4 (as per your requirement)
+            // Get all beneficiaries
             const allBeneficiaries = await this.getAllBeneficiaries();
             if (allBeneficiaries.length === 0) {
                 console.log('No beneficiaries found in contract');
                 return [];
             }
-            // Return first 4 beneficiaries for this seed with full details
-            const seedBeneficiaries = allBeneficiaries.slice(0, 4).map((b) => ({
+            // Hardcoded beneficiary mappings for specific seeds
+            const seedBeneficiaryMappings = {
+                1: [4, 1, 2, 5], // Seed 1: Walkers Reserve, El Globo, Jaguar, Pimlico
+                2: [0, 3, 2, 5], // Seed 2: Grgich Hills, Buena Vista, Jaguar, Pimlico
+                // Add more seed mappings here as needed
+            };
+            // Get beneficiary indices for this seed (default to first 4)
+            const beneficiaryIndices = seedBeneficiaryMappings[seedId] || [0, 1, 2, 3];
+            // Map indices to actual beneficiaries
+            const seedBeneficiaries = beneficiaryIndices
+                .map(index => allBeneficiaries[index])
+                .filter(b => b) // Filter out any undefined (in case index doesn't exist)
+                .map((b) => ({
                 code: b.code,
                 index: b.index,
                 name: b.name,
@@ -678,6 +1215,37 @@ class ContractService {
         catch (error) {
             console.error(`Error fetching latest snapshot for seed ${seedId}:`, error);
             return null;
+        }
+    }
+    /**
+     * Get next snapshot ID (global counter)
+     */
+    async getNextSnapshotId() {
+        if (!this.snapshotNFTContract) {
+            return 0;
+        }
+        try {
+            const nextId = await this.retryWithBackoff(async () => {
+                return await this.snapshotNFTContract.getNextSnapshotId();
+            });
+            return Number(nextId);
+        }
+        catch (error) {
+            console.error('Error fetching next snapshot ID:', error);
+            return 0;
+        }
+    }
+    /**
+     * Get current block number
+     */
+    async getCurrentBlockNumber() {
+        try {
+            const blockNumber = await this.provider.getBlockNumber();
+            return blockNumber;
+        }
+        catch (error) {
+            console.error('Error fetching current block number:', error);
+            return 0;
         }
     }
 }
