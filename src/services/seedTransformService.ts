@@ -60,7 +60,8 @@ export class SeedTransformService {
             description: projectData.description,
             benefits: projectData.benefits,
             moreDetails: projectData.moreDetails,
-            backgroundImage: projectData.backgroundImage
+            backgroundImage: projectData.backgroundImage,
+            readMoreLink: projectData.readMoreLink
           }
         };
       }

@@ -11,6 +11,7 @@ export interface ProjectData {
   benefits: string[];
   moreDetails: string;
   backgroundImage: string;
+  readMoreLink?: string; // External link to learn more about the project
 }
 
 export class ProjectsService {
