@@ -5,6 +5,7 @@ import SeedFactoryABI from '../abi/seedfactory-abi.json';
 import SeedNFTABI from '../abi/seednft-abi.json';
 import SnapshotNFTABI from '../abi/snapshotnft-abi.json';
 import DistributorABI from '../abi/distributor-abi.json';
+import { weiToEthExact } from '../utils/eth-utils';
 
 export class ContractService {
   private provider: ethers.JsonRpcProvider;
@@ -340,7 +341,7 @@ export class ContractService {
           const price = await this.retryWithBackoff(async () => {
             return await this.seedFactoryContract!.seedSnapshotPrices(seedId);
           });
-          snapshotPrice = (Number(price) / Math.pow(10, 18)).toFixed(6);
+          snapshotPrice = weiToEthExact(price);
         } catch (error) {
           console.log(`Could not fetch snapshot price for seed ${seedId}:`, error);
         }
@@ -546,7 +547,7 @@ export class ContractService {
       return snapshotData.map((snapshot: any) => ({
         creator: snapshot.creator,
         value: Number(snapshot.value),
-        valueEth: (Number(snapshot.value) / Math.pow(10, 18)).toFixed(6),
+        valueEth: weiToEthExact(snapshot.value),
         beneficiaryIndex: Number(snapshot.beneficiaryIndex),
         seedId: Number(snapshot.seedId),
         timestamp: Number(snapshot.timestamp),
@@ -1407,6 +1408,117 @@ export class ContractService {
     } catch (error) {
       console.error('Error fetching current block number:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Calculate early harvest fee (exit penalty) for a seed
+   * Based on linear vesting: 100% tax at creation, 0% tax after lock period
+   */
+  async calculateEarlyHarvestFee(seedId: number): Promise<{ feePercentage: number; feeAmount: string; canWithdrawWithoutFee: boolean } | null> {
+    if (!this.seedFactoryContract || !this.seedNFTContract) {
+      return null;
+    }
+
+    try {
+      const [seedInfo, metadata, unlockTime] = await Promise.all([
+        this.getSeedInfo(seedId),
+        this.retryWithBackoff(async () => this.seedNFTContract!.getSeedMetadata(seedId)),
+        this.getSeedUnlockTime(seedId)
+      ]);
+
+      if (!seedInfo || !unlockTime) {
+        return null;
+      }
+
+      const creationTime = Number(metadata[0]);
+      const currentTime = Math.floor(Date.now() / 1000);
+      const elapsed = currentTime - creationTime;
+      const lockPeriod = unlockTime - creationTime;
+
+      if (elapsed >= lockPeriod) {
+        return {
+          feePercentage: 0,
+          feeAmount: '0',
+          canWithdrawWithoutFee: true
+        };
+      }
+
+      // Calculate tax: 100% at start, decreases linearly to 0%
+      const basisPoints = (elapsed * 10000) / lockPeriod;
+      const remainingBasisPoints = 10000 - basisPoints;
+      const feePercentage = remainingBasisPoints / 100; // Convert to percentage
+
+      const originalDeposit = Number(seedInfo.depositAmount);
+      const feeAmountWei = (originalDeposit * remainingBasisPoints) / 10000;
+      const feeAmount = weiToEthExact(feeAmountWei);
+
+      return {
+        feePercentage: Number(feePercentage.toFixed(2)),
+        feeAmount,
+        canWithdrawWithoutFee: false
+      };
+    } catch (error) {
+      console.error(`Error calculating early harvest fee for seed ${seedId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get the highest deposit amount across all seeds (for 20% share value calculation)
+   */
+  async getHighestSeedDeposit(): Promise<string | null> {
+    if (!this.seedFactoryContract) {
+      return null;
+    }
+
+    try {
+      const maxDeposit = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.currentMaxSeedDeposit();
+      });
+
+      return weiToEthExact(maxDeposit);
+    } catch (error) {
+      console.error('Error fetching highest seed deposit:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get withdrawable amount for a seed (harvestable amount)
+   */
+  async getWithdrawableAmount(seedId: number): Promise<string | null> {
+    if (!this.seedFactoryContract) {
+      return null;
+    }
+
+    try {
+      const totalValue = await this.getTotalSeedValue(seedId);
+      if (!totalValue) {
+        return null;
+      }
+
+      // Check if seed is withdrawn
+      const seedInfo = await this.getSeedInfo(seedId);
+      if (seedInfo && seedInfo.withdrawn) {
+        return '0';
+      }
+
+      // Calculate early harvest fee
+      const feeInfo = await this.calculateEarlyHarvestFee(seedId);
+      if (!feeInfo) {
+        return totalValue;
+      }
+
+      // Withdrawable = total value - early harvest fee
+      const totalValueNum = parseFloat(totalValue);
+      const feeAmountNum = parseFloat(feeInfo.feeAmount);
+      const withdrawable = totalValueNum - feeAmountNum;
+
+      return withdrawable.toString();
+    } catch (error) {
+      console.error(`Error calculating withdrawable amount for seed ${seedId}:`, error);
+      return null;
     }
   }
 }

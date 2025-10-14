@@ -3,6 +3,7 @@ import { contractService } from '../services/contractService';
 import { seedTransformService } from '../services/seedTransformService';
 import { contractConfig } from '../config/contract';
 import { GardenDataResponse, SeedDetailResponse } from '../types/seed';
+import { weiToEthExact } from '../utils/eth-utils';
 
 export const seedController = {
   /**
@@ -152,6 +153,173 @@ export const seedController = {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch contract info',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now()
+      });
+    }
+  },
+
+  /**
+   * Get comprehensive seed statistics
+   * GET /api/seeds/:id/stats
+   */
+  getSeedStats: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const seedId = parseInt(id, 10);
+
+      if (isNaN(seedId) || seedId < 1) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid seed ID',
+          message: 'Seed ID must be a positive integer',
+          timestamp: Date.now()
+        });
+        return;
+      }
+
+      // Get seed data from contract
+      const seedData = await contractService.getSeedData(seedId);
+      
+      if (!seedData || !seedData.exists) {
+        res.status(404).json({
+          success: false,
+          error: 'Seed not found',
+          message: `Seed with ID ${seedId} does not exist`,
+          timestamp: Date.now()
+        });
+        return;
+      }
+
+      // Fetch all necessary data in parallel
+      const [
+        snapshotCount,
+        dynamicPercentage,
+        metadata,
+        unlockTime,
+        profits,
+        totalValue,
+        highestDeposit,
+        earlyFee,
+        withdrawable,
+        claimableInterest,
+        totalSeeds
+      ] = await Promise.all([
+        contractService.getSeedSnapshotCount(seedId),
+        contractService.getDynamicSeedPercentage(seedId),
+        contractService.getProvider().send('eth_getBlockByNumber', ['latest', false]),
+        contractService.getSeedUnlockTime(seedId),
+        contractService.getSeedAccumulatedProfits(seedId),
+        contractService.getTotalSeedValue(seedId),
+        contractService.getHighestSeedDeposit(),
+        contractService.calculateEarlyHarvestFee(seedId),
+        contractService.getWithdrawableAmount(seedId),
+        contractService.getClaimableInterest(),
+        contractService.getTotalSeeds()
+      ]);
+
+      // Get seed metadata for creation time
+      const seedMetadata = await contractService.getProvider().send('eth_call', [
+        {
+          to: contractConfig.seedNFTAddress,
+          data: '0x...' // getSeedMetadata call
+        },
+        'latest'
+      ]).catch(() => null);
+
+      const creationTime = seedData.timestamp;
+      const createdDate = new Date(creationTime * 1000);
+
+      // Get last snapshot mint date
+      const snapshots = await contractService.getSeedSnapshots(seedId);
+      let lastSnapshotDate = null;
+      if (snapshots.length > 0) {
+        const lastSnapshotId = snapshots[snapshots.length - 1];
+        const lastSnapshot = await contractService.getSnapshotData(lastSnapshotId);
+        if (lastSnapshot) {
+          lastSnapshotDate = new Date(lastSnapshot.timestamp * 1000).toISOString();
+        }
+      }
+
+      // Calculate values
+      const snapshotPrice = parseFloat(seedData.snapshotPrice || '0');
+      const depositAmount = parseFloat(seedData.depositAmount || '0');
+      const dynamicPercent = parseFloat(dynamicPercentage || '0');
+      
+      // Nutrient Reserve Total = original deposit + snapshot steward distributions (10-20% per snapshot)
+      const avgSnapshotDistribution = snapshotPrice * (dynamicPercent / 100);
+      const totalSnapshotDistributions = avgSnapshotDistribution * snapshotCount;
+      const nutrientReserveTotal = depositAmount + totalSnapshotDistributions;
+
+      // Absolute Nutrient Yield = original seed price + funds added later (total value)
+      const absoluteNutrientYield = parseFloat(totalValue || '0');
+
+      // 20% Share Value = 20% of highest deposit
+      const twentyPercentShareValue = parseFloat(highestDeposit || '0') * 0.2;
+
+      // Immediate Impact = total snapshots × snapshot price × 0.5 (50% goes to beneficiary)
+      const immediateImpact = snapshotCount * snapshotPrice * 0.5;
+
+      // Long-term Impact = total pool interest / number of seeds
+      const longtermImpact = totalSeeds > 0 ? parseFloat(claimableInterest || '0') / totalSeeds : 0;
+
+      // Overall Accumulated Yield = total pool interest
+      const overallYield = parseFloat(claimableInterest || '0');
+
+      res.json({
+        success: true,
+        stats: {
+          // Basic info
+          seedId: seedId,
+          seedNumber: `00${seedId}`,
+          
+          // Snapshot info
+          totalSnapshots: snapshotCount,
+          snapshotPrice: seedData.snapshotPrice,
+          snapshotShare: dynamicPercentage, // 10-20% dynamic percentage
+          
+          // Dates
+          mintedOn: createdDate.toISOString(),
+          lastSnapshotMintDate: lastSnapshotDate,
+          maturationDate: unlockTime ? new Date(unlockTime * 1000).toISOString() : null,
+          
+          // Financial metrics
+          nutrientReserveTotal: nutrientReserveTotal.toString(),
+          absoluteNutrientYield: absoluteNutrientYield.toString(),
+          harvestable: withdrawable,
+          earlyHarvestFee: earlyFee ? {
+            percentage: earlyFee.feePercentage,
+            amount: earlyFee.feeAmount,
+            canWithdrawWithoutFee: earlyFee.canWithdrawWithoutFee
+          } : null,
+          
+          // Value calculations
+          twentyPercentShareValue: twentyPercentShareValue.toString(),
+          highestSeedDeposit: highestDeposit,
+          
+          // Impact metrics
+          immediateImpact: immediateImpact.toString(),
+          immediateImpactDate: lastSnapshotDate, // Same as last snapshot mint
+          longtermImpact: longtermImpact.toString(),
+          longtermImpactDate: null, // Date of last interest distribution (not tracked on-chain)
+          overallAccumulatedYield: overallYield.toString(),
+          
+          // Detailed breakdown
+          breakdown: {
+            originalDeposit: depositAmount.toString(),
+            accumulatedProfits: profits || '0',
+            totalValue: totalValue || '0',
+            avgSnapshotDistribution: avgSnapshotDistribution.toString(),
+            totalSnapshotDistributions: totalSnapshotDistributions.toString()
+          }
+        },
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error(`Error fetching seed stats for ${req.params.id}:`, error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch seed statistics',
         message: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now()
       });

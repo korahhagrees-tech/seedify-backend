@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { contractService } from '../services/contractService';
 import { seedTransformService } from '../services/seedTransformService';
+import { weiToEthExact, generateSnapshotImageUrl } from '../utils/eth-utils';
 
 export const usersController = {
   /**
@@ -108,13 +109,22 @@ export const usersController = {
       const snapshotIds = await contractService.getUserSnapshotIds(address);
       
       const snapshots = [];
+      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+      
       for (const snapshotId of snapshotIds) {
         const data = await contractService.getSnapshotData(snapshotId);
         if (data) {
+          // Fetch real image URL from contract
+          const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
+          
+          // Generate fallback image URL
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
+          
           snapshots.push({
             id: snapshotId,
             ...data,
-            valueEth: (data.value / Math.pow(10, 18)).toFixed(6)
+            valueEth: weiToEthExact(data.value),
+            imageUrl: imageUrl || generatedImageUrl
           });
         }
       }
@@ -231,7 +241,7 @@ export const usersController = {
 
       res.json({
         success: true,
-        balance: (Number(balance) / Math.pow(10, 18)).toFixed(6),
+        balance: weiToEthExact(balance),
         balanceWei: balance,
         user: address,
         timestamp: Date.now()
@@ -276,7 +286,7 @@ export const usersController = {
         stats: {
           totalSeeds: seedIds.length,
           totalSnapshots: snapshotIds.length,
-          poolBalance: (Number(poolBalance) / Math.pow(10, 18)).toFixed(6),
+          poolBalance: weiToEthExact(poolBalance),
           seedNFTBalance: Number(seedNFTBalance),
           snapshotNFTBalance: Number(snapshotNFTBalance)
         },
@@ -329,14 +339,22 @@ export const usersController = {
       const snapshotIds = await contractService.getUserSnapshotIds(address);
       const snapshots = [];
       let totalSnapshotValue = 0;
+      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
 
       for (const snapshotId of snapshotIds) {
         const snapshotData = await contractService.getSnapshotData(snapshotId);
         if (snapshotData) {
+          // Fetch real image URL from contract
+          const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
+          
+          // Generate fallback image URL
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, snapshotData.seedId, snapshotData.positionInSeed, snapshotData.processId);
+          
           snapshots.push({
             id: snapshotId,
             ...snapshotData,
-            valueEth: (snapshotData.value / Math.pow(10, 18)).toFixed(6)
+            valueEth: weiToEthExact(snapshotData.value),
+            imageUrl: imageUrl || generatedImageUrl
           });
           totalSnapshotValue += snapshotData.value;
         }
@@ -353,9 +371,9 @@ export const usersController = {
           summary: {
             totalSeeds: seeds.length,
             totalSnapshots: snapshots.length,
-            totalDeposited: (totalDeposited / Math.pow(10, 18)).toFixed(6),
-            totalSnapshotValue: (totalSnapshotValue / Math.pow(10, 18)).toFixed(6),
-            poolBalance: (Number(poolBalance) / Math.pow(10, 18)).toFixed(6)
+            totalDeposited: weiToEthExact(totalDeposited),
+            totalSnapshotValue: weiToEthExact(totalSnapshotValue),
+            poolBalance: weiToEthExact(poolBalance)
           }
         },
         user: address,

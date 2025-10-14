@@ -12,6 +12,9 @@ router.get('/count', seedController.getSeedsCount);
 // GET /api/seeds/contract-info - Get contract information
 router.get('/contract-info', seedController.getContractInfo);
 
+// GET /api/seeds/:id/stats - Get comprehensive seed statistics
+router.get('/:id/stats', seedController.getSeedStats);
+
 // GET /api/seeds/:id - Get seed by ID
 router.get('/:id', seedController.getSeedById);
 

@@ -228,7 +228,101 @@ Returns complete seed data including beneficiaries with enriched project informa
 }
 ```
 
-### 4. Get Contract Info
+### 4. Get Seed Statistics
+**`GET /api/seeds/:id/stats`**
+
+Returns comprehensive statistics and financial metrics for a specific seed.
+
+**Parameters:**
+- `id` (path): Seed ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "stats": {
+    "seedId": 1,
+    "seedNumber": "001",
+    "totalSnapshots": 12,
+    "snapshotPrice": "0.011000",
+    "snapshotShare": "30.50",
+    "mintedOn": "2025-09-04T17:05:51.000Z",
+    "lastSnapshotMintDate": "2025-10-14T15:30:00.000Z",
+    "maturationDate": "2029-09-04T17:05:51.000Z",
+    "nutrientReserveTotal": "1.062600",
+    "absoluteNutrientYield": "1.150000",
+    "harvestable": "0.920000",
+    "earlyHarvestFee": {
+      "percentage": 85.25,
+      "amount": "0.230000",
+      "canWithdrawWithoutFee": false
+    },
+    "twentyPercentShareValue": "0.200000",
+    "highestSeedDeposit": "1.000000",
+    "immediateImpact": "0.066000",
+    "immediateImpactDate": "2025-10-14T15:30:00.000Z",
+    "longtermImpact": "0.025000",
+    "longtermImpactDate": null,
+    "overallAccumulatedYield": "0.075000",
+    "breakdown": {
+      "originalDeposit": "1.000000",
+      "accumulatedProfits": "0.150000",
+      "totalValue": "1.150000",
+      "avgSnapshotDistribution": "0.003355",
+      "totalSnapshotDistributions": "0.040260"
+    }
+  },
+  "timestamp": 1760179717118
+}
+```
+
+**Fields Explained:**
+
+**Basic Info:**
+- `seedId`: The seed's ID number
+- `seedNumber`: Formatted seed number (e.g., "001")
+- `totalSnapshots`: Number of snapshots minted for this seed
+- `snapshotPrice`: Price to mint a snapshot for this seed (ETH)
+- `snapshotShare`: Dynamic percentage (10-20%) that goes to seed from each snapshot
+
+**Dates:**
+- `mintedOn`: When the seed was created (ISO format)
+- `lastSnapshotMintDate`: When the last snapshot was minted (null if no snapshots)
+- `maturationDate`: When seed can be withdrawn without penalty (ISO format)
+
+**Financial Metrics:**
+- `nutrientReserveTotal`: Original deposit + accumulated snapshot distributions
+  - Formula: `originalDeposit + (totalSnapshots × snapshotPrice × snapshotShare%)`
+- `absoluteNutrientYield`: Total value including all profits
+  - Formula: Original seed price + funds staked later + accumulated profits
+- `harvestable`: Amount that can be withdrawn now (after fees)
+- `earlyHarvestFee`: Exit penalty information
+  - `percentage`: Tax percentage if withdrawn now (0-100%)
+  - `amount`: Tax amount in ETH
+  - `canWithdrawWithoutFee`: True if maturation date has passed
+
+**Value Calculations:**
+- `twentyPercentShareValue`: 20% of the highest seed deposit in the system
+  - Used for dynamic percentage calculations
+- `highestSeedDeposit`: The highest deposit among all seeds
+
+**Impact Metrics:**
+- `immediateImpact`: Total funding distributed to beneficiaries
+  - Formula: `totalSnapshots × snapshotPrice × 0.5` (50% goes to beneficiary)
+- `immediateImpactDate`: Date of last snapshot mint (when last distribution occurred)
+- `longtermImpact`: Estimated interest distribution per seed
+  - Formula: `totalPoolInterest / numberOfSeeds`
+- `longtermImpactDate`: Date of last interest distribution (not tracked on-chain, returns null)
+- `overallAccumulatedYield`: Total accumulated pool interest across all seeds
+
+**Breakdown:**
+- `originalDeposit`: Initial deposit amount
+- `accumulatedProfits`: Profits earned from snapshots
+- `totalValue`: Current total value (deposit + profits)
+- `avgSnapshotDistribution`: Average distribution per snapshot to seed
+- `totalSnapshotDistributions`: Total received from all snapshots
+
+### 5. Get Contract Info
 **`GET /api/seeds/contract-info`**
 
 **Response:**
@@ -1083,6 +1177,14 @@ USE_MOCK_DATA=false
 | **Beneficiary Percentage** | Distributor | `getBeneficiaryPercentage(index)` |
 | **Beneficiary Project Data** | Local File | `projects.json` (mapped by code) |
 | **Current Block Number** | Provider | `provider.getBlockNumber()` |
+| **Seed Deposit Amount** | SeedFactory | `getDepositAmount(seedId)` |
+| **Accumulated Profits** | SeedFactory | `getAccumulatedProfits(seedId)` |
+| **Total Seed Value** | SeedFactory | `getTotalSeedValue(seedId)` |
+| **Unlock Time** | SeedFactory | `getUnlockTime(seedId)` |
+| **Dynamic Seed Percentage** | SeedFactory | `getDynamicSeedPercentage(seedId)` |
+| **Highest Seed Deposit** | SeedFactory | `currentMaxSeedDeposit()` |
+| **Claimable Interest** | AavePool | `getClaimableInterest()` |
+| **Early Withdrawal Check** | SeedFactory | `seedWithdrawn[seedId]` mapping |
 
 ### Beneficiary Code → Project Mapping
 
@@ -1160,6 +1262,7 @@ All endpoints return errors in a consistent format:
 ### Seeds
 - `GET /api/seeds` - List all seeds (lightweight)
 - `GET /api/seeds/:id` - Get seed details (with beneficiaries)
+- `GET /api/seeds/:id/stats` - Get comprehensive seed statistics
 - `GET /api/seeds/count` - Total seeds count
 - `GET /api/seeds/contract-info` - Contract configuration
 

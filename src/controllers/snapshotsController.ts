@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { contractService } from '../services/contractService';
+import { weiToEthExact, generateSnapshotImageUrl } from '../utils/eth-utils';
+import { contractConfig } from '../config/contract';
 
 export const snapshotsController = {
   listBySeed: async (req: Request, res: Response) => {
@@ -19,11 +21,15 @@ export const snapshotsController = {
           // Fetch real image URL from contract
           const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
           
+          // Generate fallback image URL
+          const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
+          
           snapshots.push({
             id: snapshotId,
             ...data,
-            valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
-            imageUrl: imageUrl || undefined
+            valueEth: weiToEthExact(data.value),
+            imageUrl: imageUrl || generatedImageUrl
           });
         }
       }
@@ -51,13 +57,17 @@ export const snapshotsController = {
       // Fetch real image URL from contract
       const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
       
+      // Generate fallback image URL
+      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+      const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
+      
       res.json({ 
         success: true, 
         snapshot: {
           id: snapshotId,
           ...data,
-          valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
-          imageUrl: imageUrl || undefined
+          valueEth: weiToEthExact(data.value),
+          imageUrl: imageUrl || generatedImageUrl
         }, 
         timestamp: Date.now() 
       });
@@ -83,11 +93,15 @@ export const snapshotsController = {
           // Fetch real image URL from contract
           const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
           
+          // Generate fallback image URL
+          const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
+          
           snapshots.push({
             id: snapshotId,
             ...data,
-            valueEth: (data.value / Math.pow(10, 18)).toFixed(6),
-            imageUrl: imageUrl || undefined
+            valueEth: weiToEthExact(data.value),
+            imageUrl: imageUrl || generatedImageUrl
           });
         }
       }
@@ -107,7 +121,7 @@ export const snapshotsController = {
         success: true, 
         total, 
         valueRaised, 
-        valueRaisedEth: (Number(valueRaised) / Math.pow(10, 18)).toFixed(6),
+        valueRaisedEth: weiToEthExact(valueRaised),
         timestamp: Date.now() 
       });
     } catch (e: any) {
