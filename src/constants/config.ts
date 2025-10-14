@@ -5,4 +5,4 @@
 export const REQUIRE_ADMIN_AUTH = false;
 
 // Storage base URL - can be overridden by environment variable
-export const VERCEL_BLOB_STORAGE_URL = process.env.VERCEL_BLOB_STORAGE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com'; 
+export const VERCEL_BLOB_STORAGE_URL = process.env.VERCEL_BLOB_STORAGE_URL || 'https://d17wy07434ngk.cloudfront.net'; 

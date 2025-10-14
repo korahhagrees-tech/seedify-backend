@@ -114,17 +114,15 @@ export const usersController = {
       for (const snapshotId of snapshotIds) {
         const data = await contractService.getSnapshotData(snapshotId);
         if (data) {
-          // Fetch real image URL from contract
-          const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
-          
-          // Generate fallback image URL
+          // Generate correct image URL (prefer generated over contract URL)
+          // Contract URL uses positionInSeed instead of snapshotId, so we generate the correct one
           const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, snapshotId, data.processId);
           
           snapshots.push({
             id: snapshotId,
             ...data,
             valueEth: weiToEthExact(data.value),
-            imageUrl: imageUrl || generatedImageUrl
+            imageUrl: generatedImageUrl
           });
         }
       }
@@ -344,17 +342,15 @@ export const usersController = {
       for (const snapshotId of snapshotIds) {
         const snapshotData = await contractService.getSnapshotData(snapshotId);
         if (snapshotData) {
-          // Fetch real image URL from contract
-          const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
-          
-          // Generate fallback image URL
+          // Generate correct image URL (prefer generated over contract URL)
+          // Contract URL uses positionInSeed instead of snapshotId, so we generate the correct one
           const generatedImageUrl = generateSnapshotImageUrl(baseUrl, snapshotData.seedId, snapshotId, snapshotData.processId);
           
           snapshots.push({
             id: snapshotId,
             ...snapshotData,
             valueEth: weiToEthExact(snapshotData.value),
-            imageUrl: imageUrl || generatedImageUrl
+            imageUrl: generatedImageUrl
           });
           totalSnapshotValue += snapshotData.value;
         }

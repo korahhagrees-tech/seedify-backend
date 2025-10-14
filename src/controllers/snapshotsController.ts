@@ -18,10 +18,8 @@ export const snapshotsController = {
       for (const snapshotId of snapshotIds) {
         const data = await contractService.getSnapshotData(snapshotId);
         if (data) {
-          // Fetch real image URL from contract
-          const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
-          
-          // Generate fallback image URL
+          // Generate correct image URL (prefer generated over contract URL)
+          // Contract URL uses positionInSeed instead of snapshotId, so we generate the correct one
           const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
           const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, snapshotId, data.processId);
           
@@ -29,7 +27,7 @@ export const snapshotsController = {
             id: snapshotId,
             ...data,
             valueEth: weiToEthExact(data.value),
-            imageUrl: imageUrl || generatedImageUrl
+            imageUrl: generatedImageUrl
           });
         }
       }
@@ -90,10 +88,8 @@ export const snapshotsController = {
       for (const snapshotId of snapshotIds) {
         const data = await contractService.getSnapshotData(snapshotId);
         if (data) {
-          // Fetch real image URL from contract
-          const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
-          
-          // Generate fallback image URL
+          // Generate correct image URL (prefer generated over contract URL)
+          // Contract URL uses positionInSeed instead of snapshotId, so we generate the correct one
           const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
           const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, snapshotId, data.processId);
           
@@ -101,7 +97,7 @@ export const snapshotsController = {
             id: snapshotId,
             ...data,
             valueEth: weiToEthExact(data.value),
-            imageUrl: imageUrl || generatedImageUrl
+            imageUrl: generatedImageUrl
           });
         }
       }
