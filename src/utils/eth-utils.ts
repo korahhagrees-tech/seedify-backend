@@ -67,7 +67,7 @@ export function weiToEthDisplay(weiValue: string | number | bigint): string {
  * 
  * @param baseUrl - Base URL for images (e.g., from env variable)
  * @param seedId - The seed ID
- * @param snapshotId - The snapshot ID (positionInSeed)
+ * @param snapshotId - The actual snapshot ID (NOT positionInSeed)
  * @param processId - The unique process ID
  * @returns Full image URL
  */

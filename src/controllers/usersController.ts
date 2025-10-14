@@ -118,7 +118,7 @@ export const usersController = {
           const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
           
           // Generate fallback image URL
-          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, snapshotId, data.processId);
           
           snapshots.push({
             id: snapshotId,
@@ -348,7 +348,7 @@ export const usersController = {
           const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
           
           // Generate fallback image URL
-          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, snapshotData.seedId, snapshotData.positionInSeed, snapshotData.processId);
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, snapshotData.seedId, snapshotId, snapshotData.processId);
           
           snapshots.push({
             id: snapshotId,

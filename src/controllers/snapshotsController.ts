@@ -23,7 +23,7 @@ export const snapshotsController = {
           
           // Generate fallback image URL
           const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
-          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, snapshotId, data.processId);
           
           snapshots.push({
             id: snapshotId,
@@ -95,7 +95,7 @@ export const snapshotsController = {
           
           // Generate fallback image URL
           const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
-          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, snapshotId, data.processId);
           
           snapshots.push({
             id: snapshotId,
