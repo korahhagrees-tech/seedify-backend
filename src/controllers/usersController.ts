@@ -109,7 +109,7 @@ export const usersController = {
       const snapshotIds = await contractService.getUserSnapshotIds(address);
       
       const snapshots = [];
-      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
       
       for (const snapshotId of snapshotIds) {
         const data = await contractService.getSnapshotData(snapshotId);
@@ -339,7 +339,7 @@ export const usersController = {
       const snapshotIds = await contractService.getUserSnapshotIds(address);
       const snapshots = [];
       let totalSnapshotValue = 0;
-      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
 
       for (const snapshotId of snapshotIds) {
         const snapshotData = await contractService.getSnapshotData(snapshotId);

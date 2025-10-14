@@ -22,7 +22,7 @@ export const snapshotsController = {
           const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
           
           // Generate fallback image URL
-          const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+          const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
           const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
           
           snapshots.push({
@@ -58,7 +58,7 @@ export const snapshotsController = {
       const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
       
       // Generate fallback image URL
-      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+      const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
       const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
       
       res.json({ 
@@ -94,7 +94,7 @@ export const snapshotsController = {
           const imageUrl = await contractService.getSnapshotImageUrl(snapshotId);
           
           // Generate fallback image URL
-          const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://wof-flourishing-backup.s3.amazonaws.com';
+          const baseUrl = process.env.NEXT_PUBLIC_SNAPSHOT_IMAGE_BASE_URL || 'https://d17wy07434ngk.cloudfront.net';
           const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
           
           snapshots.push({
