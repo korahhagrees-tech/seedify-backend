@@ -305,6 +305,7 @@ export const seedController = {
           // Basic info
           seedId: seedId,
           seedNumber: `00${seedId}`,
+          openSeaUrl: `https://opensea.io/collection/way-of-flowers-snapshots-621788326?traits=[{"traitType":"Seed","values":["${seedId}"]}]`,
           
           // Snapshot info
           totalSnapshots: snapshotCount,
