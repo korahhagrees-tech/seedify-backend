@@ -62,25 +62,25 @@ export function weiToEthDisplay(weiValue: string | number | bigint): string {
 }
 
 /**
- * Generate snapshot image URL from base URL, seedId, snapshotId, and processId
- * Pattern: {baseUrl}/seed{seedId}/snap{seedId}-{snapshotId}-{processId}.png
+ * Generate snapshot image URL from base URL, seedId, positionInSeed, and processId
+ * Pattern: {baseUrl}/seed{seedId}/snap{seedId}-{positionInSeed}-{processId}.png
  * 
  * @param baseUrl - Base URL for images (e.g., from env variable)
  * @param seedId - The seed ID
- * @param snapshotId - The actual snapshot ID (NOT positionInSeed)
+ * @param positionInSeed - The snapshot's position within the seed
  * @param processId - The unique process ID
  * @returns Full image URL
  */
 export function generateSnapshotImageUrl(
   baseUrl: string,
   seedId: number,
-  snapshotId: number,
+  positionInSeed: number,
   processId: string
 ): string {
   // Remove trailing slash from baseUrl if present
   const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   
-  return `${cleanBaseUrl}/seed${seedId}/snap${seedId}-${snapshotId}-${processId}.png`;
+  return `${cleanBaseUrl}/seed${seedId}/snap${seedId}-${positionInSeed}-${processId}.png`;
 }
 
 /**

@@ -253,16 +253,16 @@ export const writeController = {
       const seedOwner = seedData.owner;
 
       // Generate unique processId on the backend
-      const processId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-      // Get next snapshot ID from contract
-      const nextSnapshotId = await contractService.getNextSnapshotId();
+      const processId = `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
       // Get current block number
       const currentBlockNumber = await contractService.getCurrentBlockNumber();
 
       // Get all snapshots for this seed to calculate distribution
       const seedSnapshots = await contractService.getSeedSnapshots(seedId);
+      
+      // Calculate next positionInSeed (this is what the image generator expects as "snapshotId")
+      const nextPositionInSeed = seedSnapshots.length + 1;
 
       // Prepare response data
       const responseData: any = {
@@ -277,7 +277,7 @@ export const writeController = {
         description: `Mint snapshot for seed ${seedId}`,
         seedOwner: seedOwner,
         processId: processId,
-        snapshotId: nextSnapshotId,
+        snapshotId: nextPositionInSeed,  // This is positionInSeed, NOT global snapshot ID
         blockNumber: currentBlockNumber
       };
 
@@ -314,6 +314,9 @@ export const writeController = {
         responseData.args.beneficiaryIndex = beneficiaryIndex;
         responseData.beneficiaryCode = beneficiaryData.code;
         responseData.beneficiaryDistribution = distributionPercentage;
+        
+        // Note: snapshotId in response represents the next snapshot's positionInSeed
+        // Frontend should send this value as "snapshotId" in the webhook (not a separate id field)
       }
 
       res.json({
@@ -336,13 +339,14 @@ export const writeController = {
   /**
    * Handle snapshot minted webhook (triggers image generation)
    * POST /api/snapshot-minted
+   * Note: snapshotId in the request body should contain the positionInSeed value
    */
   snapshotMinted: async (req: Request, res: Response): Promise<void> => {
     try {
       const { 
         contractAddress, 
         seedId, 
-        snapshotId, 
+        snapshotId,  // This is actually positionInSeed value
         beneficiaryCode, 
         beneficiaryDistribution, 
         creator, 
@@ -359,7 +363,7 @@ export const writeController = {
         res.status(400).json({
           success: false,
           error: 'Missing required fields',
-          message: 'All fields are required: contractAddress, seedId, snapshotId, beneficiaryCode, beneficiaryDistribution, creator, txHash, timestamp, blockNumber, processId',
+          message: 'All fields are required: contractAddress, seedId, snapshotId (positionInSeed), beneficiaryCode, beneficiaryDistribution, creator, txHash, timestamp, blockNumber, processId',
           timestamp: Date.now()
         });
         return;
@@ -369,10 +373,10 @@ export const writeController = {
       const imageServiceUrl = `${contractConfig.imageGenerationServiceUrl}/api/snapshot-minted`;
       
       console.log('Forwarding snapshot-minted webhook to image generation service:', imageServiceUrl);
-      console.log('Payload:', {
+      console.log('Payload (snapshotId = positionInSeed):', {
         contractAddress,
         seedId,
-        snapshotId,
+        snapshotId,  // positionInSeed value
         beneficiaryCode,
         beneficiaryDistribution,
         creator,
@@ -390,7 +394,7 @@ export const writeController = {
         body: JSON.stringify({
           contractAddress,
           seedId: Number(seedId),
-          snapshotId: Number(snapshotId),
+          snapshotId: Number(snapshotId),  // positionInSeed value (NOT the actual snapshot ID)
           beneficiaryCode,
           beneficiaryDistribution: Number(beneficiaryDistribution),
           creator,

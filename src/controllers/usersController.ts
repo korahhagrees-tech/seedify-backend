@@ -114,9 +114,8 @@ export const usersController = {
       for (const snapshotId of snapshotIds) {
         const data = await contractService.getSnapshotData(snapshotId);
         if (data) {
-          // Generate correct image URL (prefer generated over contract URL)
-          // Contract URL uses positionInSeed instead of snapshotId, so we generate the correct one
-          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, snapshotId, data.processId);
+          // Generate image URL using positionInSeed (matches contract behavior)
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, data.seedId, data.positionInSeed, data.processId);
           
           snapshots.push({
             id: snapshotId,
@@ -342,9 +341,8 @@ export const usersController = {
       for (const snapshotId of snapshotIds) {
         const snapshotData = await contractService.getSnapshotData(snapshotId);
         if (snapshotData) {
-          // Generate correct image URL (prefer generated over contract URL)
-          // Contract URL uses positionInSeed instead of snapshotId, so we generate the correct one
-          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, snapshotData.seedId, snapshotId, snapshotData.processId);
+          // Generate image URL using positionInSeed (matches contract behavior)
+          const generatedImageUrl = generateSnapshotImageUrl(baseUrl, snapshotData.seedId, snapshotData.positionInSeed, snapshotData.processId);
           
           snapshots.push({
             id: snapshotId,
