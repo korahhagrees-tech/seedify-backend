@@ -230,6 +230,11 @@ export const seedController = {
       const creationTime = seedData.timestamp;
       const createdDate = new Date(creationTime * 1000);
 
+      // Calculate values first (needed for beneficiary stats)
+      const snapshotPrice = parseFloat(seedData.snapshotPrice || '0');
+      const depositAmount = parseFloat(seedData.depositAmount || '0');
+      const dynamicPercent = parseFloat(dynamicPercentage || '0');
+
       // Get last snapshot mint date
       const snapshots = await contractService.getSeedSnapshots(seedId);
       let lastSnapshotDate = null;
@@ -241,10 +246,38 @@ export const seedController = {
         }
       }
 
-      // Calculate values
-      const snapshotPrice = parseFloat(seedData.snapshotPrice || '0');
-      const depositAmount = parseFloat(seedData.depositAmount || '0');
-      const dynamicPercent = parseFloat(dynamicPercentage || '0');
+      // Get beneficiaries for this seed with their stats
+      const seedBeneficiaries = await contractService.getSeedBeneficiaries(seedId) as any[];
+      const beneficiaryStats = [];
+
+      for (const ben of seedBeneficiaries) {
+        const beneficiary = ben as any; // Cast to access all fields
+        if (beneficiary.index !== undefined) {
+          // Get snapshot count for this beneficiary
+          const beneficiarySnapshotCount = await contractService.getBeneficiarySnapshotCount(beneficiary.index);
+          
+          // Get total value raised for this beneficiary
+          const beneficiaryTotalValue = await contractService.getBeneficiaryTotalValue(beneficiary.index);
+          
+          // Calculate snapshots gain (total value from snapshot mints)
+          const snapshotsGain = beneficiarySnapshotCount * snapshotPrice;
+          
+          beneficiaryStats.push({
+            name: beneficiary.name || '',
+            code: beneficiary.code || '',
+            index: beneficiary.index,
+            address: beneficiary.address || '',
+            benefitShare: beneficiary.percentage || '0', // Percentage allocation
+            snapshotsGain: snapshotsGain.toString(), // Total from snapshot mints
+            unclaimed: beneficiary.claimableAmount || '0', // Claimable amount
+            claimed: beneficiary.totalClaimed || '0', // Already claimed
+            yieldShare: beneficiary.allocatedAmount || '0', // Allocated from interest distributions
+            garden: beneficiaryTotalValue || '0', // Total value raised for beneficiary
+            snapshotCount: beneficiarySnapshotCount, // Number of snapshots
+            totalValue: beneficiaryTotalValue || '0' // Total beneficiary value
+          });
+        }
+      }
       
       // Nutrient Reserve Total = original deposit + snapshot steward distributions (10-20% per snapshot)
       const avgSnapshotDistribution = snapshotPrice * (dynamicPercent / 100);
@@ -303,6 +336,9 @@ export const seedController = {
           longtermImpact: longtermImpact.toString(),
           longtermImpactDate: null, // Date of last interest distribution (not tracked on-chain)
           overallAccumulatedYield: overallYield.toString(),
+          
+          // Beneficiary stats for this seed
+          beneficiaries: beneficiaryStats,
           
           // Detailed breakdown
           breakdown: {
