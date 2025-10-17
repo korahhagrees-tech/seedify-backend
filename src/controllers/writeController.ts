@@ -4,7 +4,289 @@ import { contractConfig } from '../config/contract';
 
 export const writeController = {
   /**
-   * Create a new seed
+   * Prepare seed creation (provides all necessary data for frontend)
+   * GET /api/write/seeds/prepare/:address
+   */
+  prepareSeedCreation: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { address } = req.params;
+
+      if (!address || !address.startsWith('0x') || address.length !== 42) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid address',
+          message: 'Please provide a valid Ethereum address',
+          timestamp: Date.now()
+        });
+        return;
+      }
+
+      // Fetch all required data from contracts
+      const [
+        seedPrice,
+        seedFee,
+        defaultSnapshotPrice,
+        currentSeedCount,
+        maxSeeds,
+        isLocked,
+        seederAllowance,
+        allBeneficiaries
+      ] = await Promise.all([
+        contractService.getSeedPrice(),
+        contractService.getSeedFee(),
+        contractService.getDefaultSnapshotPrice(),
+        contractService.getTotalSeeds(),
+        contractService.getMaxSeeds(),
+        contractService.isFactoryLocked(),
+        contractService.getSeederAllowance(address).catch(() => '0'),
+        contractService.getAllBeneficiaries()
+      ]);
+
+      // Calculate costs
+      const seedPriceNum = parseFloat(seedPrice);
+      const seedFeeNum = parseFloat(seedFee);
+      const feeAmount = (seedPriceNum * seedFeeNum) / 10000;
+      const totalMinimumCost = seedPriceNum + feeAmount;
+
+      // Check if user can mint
+      const canMint = !isLocked || seederAllowance !== '0' || address.toLowerCase() === (await contractService.getOwner()).toLowerCase();
+      const seedCapReached = currentSeedCount >= maxSeeds;
+
+      // Filter active beneficiaries only
+      const activeBeneficiaries = allBeneficiaries
+        .filter((b: any) => b.isActive)
+        .map((b: any) => ({
+          index: b.index,
+          name: b.name,
+          code: b.code,
+          address: b.address
+        }));
+
+      // Response data
+      res.json({
+        success: true,
+        data: {
+          // Contract configuration
+          contractAddress: contractService.getContractAddress(),
+          
+          // Pricing information
+          seedPrice: seedPrice,
+          seedFee: seedFee,
+          feeAmount: feeAmount.toFixed(18),
+          totalMinimumCost: totalMinimumCost.toFixed(18),
+          defaultSnapshotPrice: defaultSnapshotPrice,
+          
+          // Access control
+          canMint: canMint && !seedCapReached,
+          isLocked: isLocked,
+          seederAllowance: seederAllowance,
+          
+          // Limits
+          currentSeedCount: currentSeedCount,
+          maxSeeds: maxSeeds,
+          seedCapReached: seedCapReached,
+          
+          // Beneficiaries
+          activeBeneficiaries: activeBeneficiaries,
+          beneficiaryCount: activeBeneficiaries.length,
+          
+          // Recommendations
+          recommendations: {
+            minimumPayment: totalMinimumCost.toFixed(18),
+            suggestedPayment: (totalMinimumCost * 1.1).toFixed(18), // 10% extra for deposit
+            maxBeneficiaries: 4
+          },
+          
+          // Validation rules
+          validation: {
+            snapshotPriceMin: defaultSnapshotPrice,
+            locationRequired: true,
+            beneficiariesRequired: 4,
+            addressFormat: '0x + 40 hex characters'
+          }
+        },
+        message: canMint && !seedCapReached 
+          ? 'Ready to create seed' 
+          : seedCapReached 
+            ? 'Seed cap reached' 
+            : 'Factory locked - user not authorized',
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error preparing seed creation:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to prepare seed creation',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now()
+      });
+    }
+  },
+
+  /**
+   * Webhook: Called after seed is created
+   * POST /api/seed-created
+   */
+  seedCreated: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        seedId,
+        creator,
+        recipient,
+        depositAmount,
+        snapshotPrice,
+        location,
+        beneficiaries,
+        txHash,
+        blockNumber,
+        timestamp: creationTimestamp
+      } = req.body;
+
+      // Validate required fields
+      if (!seedId || !creator || !recipient || !depositAmount || !txHash || !blockNumber) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields',
+          message: 'seedId, creator, recipient, depositAmount, txHash, and blockNumber are required',
+          timestamp: Date.now()
+        });
+        return;
+      }
+
+      console.log('Seed created webhook received:', {
+        seedId,
+        creator,
+        recipient,
+        depositAmount,
+        snapshotPrice,
+        location,
+        beneficiaries,
+        txHash,
+        blockNumber
+      });
+
+      // TODO: Add additional processing here:
+      // - Trigger seed image generation
+      // - Send notification emails
+      // - Update analytics
+      // - Log to database
+      // - Send to external webhooks
+
+      res.json({
+        success: true,
+        message: 'Seed creation recorded successfully',
+        data: {
+          seedId,
+          processed: true
+        },
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error processing seed creation webhook:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process seed creation',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now()
+      });
+    }
+  },
+
+  /**
+   * Validate seed creation parameters (pre-flight check)
+   * POST /api/write/seeds/validate
+   */
+  validateSeedCreation: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        recipient,
+        snapshotPrice,
+        beneficiaryIndices,
+        paymentAmount
+      } = req.body;
+
+      const errors: string[] = [];
+      const warnings: string[] = [];
+
+      // Validate recipient address
+      if (!recipient || !recipient.startsWith('0x') || recipient.length !== 42) {
+        errors.push('Invalid recipient address format');
+      }
+
+      // Validate snapshot price
+      const defaultSnapshotPrice = await contractService.getDefaultSnapshotPrice();
+      const snapshotPriceNum = parseFloat(snapshotPrice || '0');
+      const defaultPriceNum = parseFloat(defaultSnapshotPrice);
+      
+      if (snapshotPriceNum < defaultPriceNum) {
+        errors.push(`Snapshot price must be at least ${defaultSnapshotPrice} ETH`);
+      }
+
+      // Validate beneficiaries
+      if (!Array.isArray(beneficiaryIndices) || beneficiaryIndices.length !== 4) {
+        errors.push('Exactly 4 beneficiary indices required');
+      } else {
+        // Check each beneficiary is valid
+        const allBeneficiaries = await contractService.getAllBeneficiaries();
+        for (const index of beneficiaryIndices) {
+          const beneficiary = allBeneficiaries.find((b: any) => b.index === index);
+          if (!beneficiary) {
+            errors.push(`Beneficiary index ${index} not found`);
+          } else if (!beneficiary.isActive) {
+            errors.push(`Beneficiary ${beneficiary.name} (${index}) is inactive`);
+          }
+        }
+      }
+
+      // Validate payment amount
+      const seedPrice = await contractService.getSeedPrice();
+      const seedFee = await contractService.getSeedFee();
+      const seedPriceNum = parseFloat(seedPrice);
+      const seedFeeNum = parseFloat(seedFee);
+      const feeAmount = (seedPriceNum * seedFeeNum) / 10000;
+      const totalMinimumCost = seedPriceNum + feeAmount;
+      const paymentNum = parseFloat(paymentAmount || '0');
+
+      if (paymentNum < totalMinimumCost) {
+        errors.push(`Payment of ${paymentAmount} ETH is below minimum ${totalMinimumCost.toFixed(18)} ETH`);
+      } else if (paymentNum > totalMinimumCost) {
+        const extraDeposit = paymentNum - totalMinimumCost;
+        warnings.push(`Extra ${extraDeposit.toFixed(18)} ETH will be deposited to Aave for yield generation`);
+      }
+
+      // Calculate breakdown
+      const depositAmount = paymentNum - feeAmount;
+      const perBeneficiary = depositAmount / 4;
+
+      const isValid = errors.length === 0;
+
+      res.json({
+        success: true,
+        valid: isValid,
+        errors: errors,
+        warnings: warnings,
+        breakdown: {
+          payment: paymentAmount,
+          fee: feeAmount.toFixed(18),
+          deposit: depositAmount.toFixed(18),
+          perBeneficiary: perBeneficiary.toFixed(18)
+        },
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error validating seed creation:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to validate seed creation',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: Date.now()
+      });
+    }
+  },
+
+  /**
+   * DEPRECATED: Legacy create seed endpoint
+   * Use prepareSeedCreation instead
    * POST /api/write/seeds/create
    */
   createSeed: async (req: Request, res: Response): Promise<void> => {

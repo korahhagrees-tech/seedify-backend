@@ -1521,6 +1521,139 @@ export class ContractService {
       return null;
     }
   }
+
+  /**
+   * Get seed price (cost to create a seed)
+   */
+  async getSeedPrice(): Promise<string> {
+    if (!this.seedFactoryContract) {
+      return '0.048'; // Default for mock data
+    }
+
+    try {
+      const price = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.seedPrice();
+      });
+      return weiToEthExact(price);
+    } catch (error) {
+      console.error('Error fetching seed price:', error);
+      return '0.048';
+    }
+  }
+
+  /**
+   * Get seed fee (percentage in basis points)
+   */
+  async getSeedFee(): Promise<string> {
+    if (!this.seedFactoryContract) {
+      return '500'; // Default 5% (500 basis points)
+    }
+
+    try {
+      const fee = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.seedFee();
+      });
+      return fee.toString();
+    } catch (error) {
+      console.error('Error fetching seed fee:', error);
+      return '500';
+    }
+  }
+
+  /**
+   * Get default snapshot price
+   */
+  async getDefaultSnapshotPrice(): Promise<string> {
+    if (!this.seedFactoryContract) {
+      return '0.011'; // Default
+    }
+
+    try {
+      const price = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.defaultSnapshotPrice();
+      });
+      return weiToEthExact(price);
+    } catch (error) {
+      console.error('Error fetching default snapshot price:', error);
+      return '0.011';
+    }
+  }
+
+  /**
+   * Get maximum seeds allowed
+   */
+  async getMaxSeeds(): Promise<number> {
+    if (!this.seedFactoryContract) {
+      return 1000; // Default
+    }
+
+    try {
+      const maxSeeds = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.maxSeeds();
+      });
+      return Number(maxSeeds);
+    } catch (error) {
+      console.error('Error fetching max seeds:', error);
+      return 1000;
+    }
+  }
+
+  /**
+   * Check if factory is locked (restricted minting)
+   */
+  async isFactoryLocked(): Promise<boolean> {
+    if (!this.seedFactoryContract) {
+      return false;
+    }
+
+    try {
+      const locked = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.locked();
+      });
+      return Boolean(locked);
+    } catch (error) {
+      console.error('Error checking factory lock status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get seeder allowance for an address
+   */
+  async getSeederAllowance(address: string): Promise<string> {
+    if (!this.seedFactoryContract) {
+      return '0';
+    }
+
+    try {
+      const allowance = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.seederAllowance(address);
+      });
+      return allowance.toString();
+    } catch (error) {
+      console.error('Error fetching seeder allowance:', error);
+      return '0';
+    }
+  }
+
+  /**
+   * Get owner address of the factory contract
+   */
+  async getOwner(): Promise<string> {
+    if (!this.seedFactoryContract) {
+      return '0x0000000000000000000000000000000000000000';
+    }
+
+    try {
+      const owner = await this.retryWithBackoff(async () => {
+        return await this.seedFactoryContract!.owner();
+      });
+      return owner;
+    } catch (error) {
+      console.error('Error fetching owner:', error);
+      return '0x0000000000000000000000000000000000000000';
+    }
+  }
 }
 
 // Export singleton instance

@@ -45,8 +45,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/write', writeRoutes);
 app.use('/api/users', usersRoutes);
 
-// Webhook endpoint for snapshot minting (invalidate snapshots, seeds, and users cache)
+// Webhook endpoints (invalidate caches after external events)
 app.post('/api/snapshot-minted', invalidateCacheMiddleware(['snapshots:', 'seeds:', 'users:']), writeController.snapshotMinted);
+app.post('/api/seed-created', invalidateCacheMiddleware(['seeds:', 'users:']), writeController.seedCreated);
 
 // Root endpoint
 app.get('/', (req, res) => {

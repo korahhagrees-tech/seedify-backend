@@ -4,6 +4,12 @@ import { invalidateCacheMiddleware } from '../middleware/cache';
 
 const router = express.Router();
 
+// Seed creation preparation (NEW - primary endpoint for seed creation)
+router.get('/seeds/prepare/:address', writeController.prepareSeedCreation);
+
+// Seed validation (pre-flight checks)
+router.post('/seeds/validate', writeController.validateSeedCreation);
+
 // Seed operations (invalidate seed and user caches)
 router.post('/seeds/create', invalidateCacheMiddleware(['seeds:', 'users:']), writeController.createSeed);
 router.post('/seeds/:id/deposit', invalidateCacheMiddleware(['seeds:', 'users:']), writeController.depositToSeed);
