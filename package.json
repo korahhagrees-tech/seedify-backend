@@ -26,13 +26,14 @@
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "next": "15.5.4",
+    "node-cache": "^5.1.2",
     "nodemon": "^3.1.10",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "ts-node": "^10.9.2",
     "uuid": "^13.0.0",
-    "wagmi": "^2.17.5",
     "viem": "^2.38.0",
+    "wagmi": "^2.17.5",
     "zod": "^4.1.11"
   },
   "devDependencies": {

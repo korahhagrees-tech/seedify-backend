@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
+import { invalidateCacheMiddleware } from './middleware/cache';
 import healthRoutes from './routes/health';
 import statusRoutes from './routes/status';
 import seedRoutes from './routes/seeds';
@@ -44,8 +45,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/write', writeRoutes);
 app.use('/api/users', usersRoutes);
 
-// Webhook endpoint for snapshot minting
-app.post('/api/snapshot-minted', writeController.snapshotMinted);
+// Webhook endpoint for snapshot minting (invalidate snapshots, seeds, and users cache)
+app.post('/api/snapshot-minted', invalidateCacheMiddleware(['snapshots:', 'seeds:', 'users:']), writeController.snapshotMinted);
 
 // Root endpoint
 app.get('/', (req, res) => {
