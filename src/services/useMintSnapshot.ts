@@ -44,9 +44,9 @@ interface UseMintSnapshotReturn {
   apiResponse: any;
 }
 
-// Internal API route to securely relay snapshot event to external service
+// Backend proxy endpoint to forward snapshot data to external image generation service
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
-const INTERNAL_SNAPSHOT_WEBHOOK_ROUTE = `${BACKEND_URL}/api/snapshot-minted`;
+const SNAPSHOT_IMAGE_GENERATION_ENDPOINT = `${BACKEND_URL}/api/snapshot-minted`;
 
 export function useMintSnapshot({
   contractAddress,
@@ -100,7 +100,8 @@ export function useMintSnapshot({
       setMintSnapshotTxHash(tx as `0x${string}`);
       setLastMintTxHash(tx as `0x${string}`);
       
-      // Call external API service to activate image rendering
+      // Call backend proxy to forward snapshot data to external image generation service
+      // This is a simple POST request (not a webhook) to trigger image generation
       setApiLoading(true);
       setApiError(null);
       try {
@@ -122,9 +123,9 @@ export function useMintSnapshot({
         }
         
         // Use the SAME process ID that was used in the contract call
-        console.log('Using same process ID for API call:', uniqueProcessId);
+        console.log('Sending snapshot data to backend proxy with process ID:', uniqueProcessId);
         
-        const response = await fetch(INTERNAL_SNAPSHOT_WEBHOOK_ROUTE, {
+        const response = await fetch(SNAPSHOT_IMAGE_GENERATION_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -144,12 +145,13 @@ export function useMintSnapshot({
         if (response.ok) {
           const data = await response.json();
           setApiResponse(data);
+          console.log('Image generation request successful:', data);
         } else {
           const errorData = await response.json();
           throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}${errorData.details ? `: ${errorData.details}` : ''}`);
         }
       } catch (err) {
-        console.error('Failed to call external API service:', err);
+        console.error('Failed to call backend proxy for image generation:', err);
         setApiError(err instanceof Error ? err.message : 'Unknown error occurred');
       } finally {
         setApiLoading(false);
@@ -170,12 +172,19 @@ export function useMintSnapshot({
       // Refresh snapshots to include the newly minted one
       refreshSnapshots();
 
-      // Flag to send external webhook after snapshots update
-      setPendingExternalPost(true);
+      // COMMENTED OUT: Duplicate POST request logic
+      // This was causing duplicate calls to the image generation service
+      // The first call (immediately after transaction) has all the required data
+      // This second call would fail validation because beneficiaryCode and beneficiaryDistribution are null
+      // setPendingExternalPost(true);
     }
   }, [mintSnapshotSuccess, refreshSnapshots]);
 
-  // After snapshots refresh, send external webhook with required data
+  // COMMENTED OUT: Duplicate POST request after transaction confirms
+  // This logic was sending a second request with incomplete data (null beneficiaryCode and beneficiaryDistribution)
+  // The first request (immediately after minting) already has all required data and triggers image generation
+  // Keeping this code commented for reference in case we need to restore it with proper data
+  /*
   useEffect(() => {
     const postIfReady = async () => {
       if (!pendingExternalPost || !address) return;
@@ -195,8 +204,8 @@ export function useMintSnapshot({
         contractAddress,
         seedId: seedId,
         snapshotId: latest.snapshotId,
-        beneficiaryCode: null, // Update with real code if/when available
-        beneficiaryDistribution: null, // Update with real distribution if/when available
+        beneficiaryCode: null, // ❌ NULL - Would fail backend validation
+        beneficiaryDistribution: null, // ❌ NULL - Would fail backend validation
         creator: address,
         txHash: lastMintTxHash,
         timestamp: latest.timestamp,
@@ -204,18 +213,17 @@ export function useMintSnapshot({
         processId: lastMintedProcessId,
       };
 
-      console.log('Webhook payload using process ID:', lastMintedProcessId);
-      console.log('Full webhook payload:', payload);
+      console.log('Second POST payload (DISABLED) - had null values:', payload);
 
       try {
-        await fetch(INTERNAL_SNAPSHOT_WEBHOOK_ROUTE, {
+        await fetch(SNAPSHOT_IMAGE_GENERATION_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
         setPostedSnapshotIds((prev: number[]) => [...prev, latest.snapshotId]);
       } catch (err) {
-        console.error('Failed to POST snapshot-minted webhook:', err);
+        console.error('Failed to POST second request:', err);
       } finally {
         setPendingExternalPost(false);
       }
@@ -223,6 +231,7 @@ export function useMintSnapshot({
 
     postIfReady();
   }, [pendingExternalPost, snapshots, address, contractAddress, seedId, lastMintTxHash, postedSnapshotIds, lastMintedProcessId]);
+  */
 
   return {
     handleMintSnapshot,

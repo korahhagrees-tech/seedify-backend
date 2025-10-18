@@ -14,6 +14,7 @@ import snapshotRoutes from './routes/snapshots';
 import adminRoutes from './routes/admin';
 import writeRoutes from './routes/write';
 import usersRoutes from './routes/users';
+import transactionRoutes from './routes/transactions';
 import { writeController } from './controllers/writeController';
 
 // Create Express app
@@ -44,6 +45,7 @@ app.use('/api/snapshots', snapshotRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/write', writeRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // Webhook endpoints (invalidate caches after external events)
 app.post('/api/snapshot-minted', invalidateCacheMiddleware(['snapshots:', 'seeds:', 'users:']), writeController.snapshotMinted);
@@ -64,6 +66,7 @@ app.get('/', (req, res) => {
       admin: '/api/admin',
       write: '/api/write',
       users: '/api/users',
+      transactions: '/api/transactions',
       snapshotMinted: '/api/snapshot-minted'
     }
   });

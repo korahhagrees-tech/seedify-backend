@@ -619,8 +619,15 @@ export const writeController = {
   },
 
   /**
-   * Handle snapshot minted webhook (triggers image generation)
+   * Proxy endpoint to forward snapshot data to external image generation service
    * POST /api/snapshot-minted
+   * 
+   * This is a simple POST proxy (NOT a webhook) that:
+   * 1. Receives snapshot data from frontend after successful mint
+   * 2. Validates all required fields
+   * 3. Forwards data to external image generation service
+   * 4. Returns response back to frontend
+   * 
    * Note: snapshotId in the request body should contain the positionInSeed value
    */
   snapshotMinted: async (req: Request, res: Response): Promise<void> => {
@@ -651,11 +658,11 @@ export const writeController = {
         return;
       }
 
-      // Forward the request to the external image generation service
+      // Forward the request to the external image generation service via proxy
       const imageServiceUrl = `${contractConfig.imageGenerationServiceUrl}/api/snapshot-minted`;
       
-      console.log('Forwarding snapshot-minted webhook to image generation service:', imageServiceUrl);
-      console.log('Payload (snapshotId = positionInSeed):', {
+      console.log('📤 Proxying snapshot data to external image generation service:', imageServiceUrl);
+      console.log('📦 Snapshot data being forwarded (single request):', {
         contractAddress,
         seedId,
         snapshotId,  // positionInSeed value
@@ -689,7 +696,7 @@ export const writeController = {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Image generation service error:', errorText);
+        console.error('❌ Image generation service error:', errorText);
         res.status(response.status).json({
           success: false,
           error: 'Image generation service error',
@@ -700,19 +707,19 @@ export const writeController = {
       }
 
       const result = await response.json();
-      console.log('Image generation service response:', result);
+      console.log('✅ Image generation service response:', result);
 
       res.json({
         success: true,
-        message: 'Snapshot minted webhook processed successfully',
+        message: 'Snapshot data forwarded to image generation service successfully',
         data: result,
         timestamp: Date.now()
       });
     } catch (error) {
-      console.error('Error processing snapshot-minted webhook:', error);
+      console.error('❌ Error proxying snapshot data to image generation service:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to process snapshot-minted webhook',
+        error: 'Failed to forward snapshot data to image generation service',
         message: error instanceof Error ? error.message : 'Unknown error',
         timestamp: Date.now()
       });
