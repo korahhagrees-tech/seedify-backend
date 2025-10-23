@@ -61,7 +61,12 @@ export class SeedTransformService {
             benefits: projectData.benefits,
             moreDetails: projectData.moreDetails,
             backgroundImage: projectData.backgroundImage,
-            readMoreLink: projectData.readMoreLink
+            readMoreLink: projectData.readMoreLink,
+            climate: projectData.climate,
+            nativeFlora: projectData.nativeFlora,
+            creditType: projectData.creditType,
+            technologyIntegration: projectData.technologyIntegration,
+            communityInnovation: projectData.communityInnovation
           }
         };
       }

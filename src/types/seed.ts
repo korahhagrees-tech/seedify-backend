@@ -67,6 +67,11 @@ export interface BeneficiaryRef {
     moreDetails: string;
     backgroundImage: string;
     readMoreLink?: string; // External link to learn more about the project
+    climate?: string;
+    nativeFlora?: string;
+    creditType?: string;
+    technologyIntegration?: string;
+    communityInnovation?: string;
   };
   slug?: string; // URL-friendly slug for routing (e.g., "grgich-hills-estate")
 }

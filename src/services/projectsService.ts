@@ -12,6 +12,11 @@ export interface ProjectData {
   moreDetails: string;
   backgroundImage: string;
   readMoreLink?: string; // External link to learn more about the project
+  climate?: string;
+  nativeFlora?: string;
+  creditType?: string;
+  technologyIntegration?: string;
+  communityInnovation?: string;
 }
 
 export class ProjectsService {

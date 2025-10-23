@@ -32,7 +32,12 @@ function enrichBeneficiary(beneficiary: BeneficiaryRef): BeneficiaryRef {
         benefits: projectData.benefits,
         moreDetails: projectData.moreDetails,
         backgroundImage: projectData.backgroundImage,
-        readMoreLink: projectData.readMoreLink || undefined
+        readMoreLink: projectData.readMoreLink || undefined,
+        climate: projectData.climate,
+        nativeFlora: projectData.nativeFlora,
+        creditType: projectData.creditType,
+        technologyIntegration: projectData.technologyIntegration,
+        communityInnovation: projectData.communityInnovation
       }
     };
   }
